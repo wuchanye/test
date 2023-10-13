@@ -19,7 +19,6 @@ import os
 import requests
 import re
 import base64
-from github import Github
 
 
 from flask import Flask
