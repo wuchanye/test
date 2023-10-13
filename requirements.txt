@@ -1,3 +1,7 @@
 flask
 line-bot-sdk
-gunicorn
+opencc
+selenium
+Pillow
+pyimgur
+requests
