@@ -81,7 +81,7 @@ def handle_message(event):
                 
                 github_repo = 'wuchanye/test'
                 github_path = 'imgs2/' + img_keyword + '.jpg'
-                github_token = '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'
+                github_token = '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'
                 img_path = download_images_and_upload_to_github(1, img_keyword, github_repo,github_path, github_token)
                 img_message = upload_image_to_github(img_path, github_repo, github_path, github_token)
 
