@@ -218,6 +218,7 @@ def init_browser(img_keyword):
     url = f'https://www.google.com.hk/search?q={img_keyword}&tbm=isch'
     
     chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-infobars") # 禁用一些瀏覽器的信息欄
     
     # 創建一個帶有特定配置的 Chrome 瀏覽器實例
