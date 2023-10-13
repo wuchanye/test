@@ -15,8 +15,8 @@ RUN pip install -r requirements.txt
 COPY . /app
 
 # 设置Chrome和ChromeDriver的路径
-# ENV CHROME_BINARY /usr/bin/chromium
-# ENV CHROMEDRIVER_PATH /usr/local/bin/chromedriver
+ENV CHROME_BINARY /usr/bin/chromium
+ENV CHROMEDRIVER_PATH /usr/local/bin/chromedriver
 
 # 暴露一个端口，如果需要的话
 EXPOSE 5000
