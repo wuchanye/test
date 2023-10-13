@@ -59,7 +59,7 @@ def handle_message(event):
         current_state = NORMAL  # 回復正常狀態
         search_results, messages = search(keyword)
         
-        if search_results:  # 不是空列表，即有搜尋結果
+        if search_results:  # 不是空列表，即有搜尋結
             current_state = WAITING_FOR_QUERY_NUM
             title = '請選擇想查詢的食物代號：\n'
             for i in range(len(messages) - 1, 0, -1):
