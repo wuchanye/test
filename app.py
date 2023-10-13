@@ -229,7 +229,7 @@ def init_browser(img_keyword):
     return browser
 
 
-def download_images_and_upload_to_github(round, img_keyword, github_token):
+def download_images_and_upload_to_github(1, img_keyword, github_repo,github_path, github_token):
     # Initialize the browser
     browser = init_browser(img_keyword)
     local_folder = 'imgs2'
