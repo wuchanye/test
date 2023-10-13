@@ -78,11 +78,11 @@ def handle_message(event):
                 query_number = int(user_message)
                 img_keyword, message = query(query_number, search_results)
                 
-                img_url = download_images_and_upload_to_github(1, img_keyword, github_token)
-                img_message = ImageSendMessage(
-                              original_content_url=f'{img_url}',  
-                              preview_image_url=f'{img_url}')
-                
+                github_repo = 'wuchanye/test'
+                github_path = 'imgs2/' + img_keyword + '.jpg'
+                img_path = download_images_and_upload_to_github(1, img_keyword, github_repo,github_path, github_token)
+                img_message = upload_image_to_github(img_path, github_repo, github_path, github_token)
+
                 messages = [message , img_message]
                 line_bot_api.reply_message(event.reply_token, messages)
                 
@@ -238,8 +238,7 @@ def download_images_and_upload_to_github(round, img_keyword, github_token):
         
     data_url_count = 0
     max_image_size = 1024 * 1024
-    github_repo = 'wuchanye/test'  # Replace with your GitHub repository
-    github_path = 'imgs2/' + img_keyword + '.jpg'
+    
     
     for i in range(round):
         try:
@@ -269,13 +268,8 @@ def download_images_and_upload_to_github(round, img_keyword, github_token):
                                     image = image.convert("RGB")
                                     
                                     # Save the image locally
-                                    local_filename = f'./{local_folder}/{img_keyword}.jpg'
-                                    image.save(local_filename)
-                                    
-                                    # Upload the image to GitHub
-                                    upload_image_to_github(local_filename, github_repo, github_path, github_token)
-                                    img_url = f'https://raw.githubusercontent.com/{github_repo}/main/img2/{img_keyword}.jpg'
-                                    return img_url
+                                    filename = f'./{local_folder}/{img_keyword}.jpg'
+                                    image.save(filename)
                                     break
                     else:
                         if len(img_url) <= 200:
@@ -286,9 +280,6 @@ def download_images_and_upload_to_github(round, img_keyword, github_token):
                                     with open(local_filename, 'wb') as file:
                                         file.write(r.content)
                                         file.close()
-                                        upload_image_to_github(local_filename, github_repo, github_path, github_token)
-                                        img_url = f'https://raw.githubusercontent.com/{github_repo}/main/img2/{img_keyword}.jpg'
-                                        return img_url
                                         break
         except StaleElementReferenceException:
             print("出現StaleElementReferenceException錯誤，重新定位元素")
@@ -297,29 +288,31 @@ def download_images_and_upload_to_github(round, img_keyword, github_token):
     time.sleep(0.5)
     browser.close()
     print("爬取完成") 
+    return filename 
 
 def upload_image_to_github(local_filename, github_repo, github_path, github_token):
     with open(local_filename, 'rb') as file:
         content = file.read()
-
     headers = {
         "Authorization": f"Bearer {github_token}",
         "Content-Type": "application/json",
     }
-    
     url = f"https://api.github.com/repos/{github_repo}/contents/{github_path}"
+    
     data = {
         "message": "Add image",
         "content": base64.b64encode(content).decode('utf-8'),
     }
-
     response = requests.put(url, headers=headers, json=data)
-
-    if response.status_code == 200:
-        print("Image uploaded to GitHub successfully.")
-    else:
-        print("Failed to upload image to GitHub.")
-        print(response.text)
+    content = response.json()
+    
+    image_url = content.get('download_url')
+    img_message = ImageSendMessage(
+    original_content_url=f'{image_url}',  
+    preview_image_url=f'{image_url}'  
+    )
+    return img_message
+    
 
 
 # 主程式
