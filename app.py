@@ -79,7 +79,7 @@ def handle_message(event):
                 query_number = int(user_message)
                 img_keyword, message = query(query_number, search_results)
                 
-                img_url = download_images_and_upload_to_github(1, 'your_image_keyword', github_token)
+                img_url = download_images_and_upload_to_github(1, img_keyword, github_token)
                 img_message = ImageSendMessage(
                               original_content_url=f'{img_url}',  
                               preview_image_url=f'{img_url}')
@@ -318,8 +318,6 @@ def upload_image_to_github(local_filename, github_repo, github_path, github_toke
 
     if response.status_code == 200:
         print("Image uploaded to GitHub successfully.")
-        
-        
     else:
         print("Failed to upload image to GitHub.")
         print(response.text)
