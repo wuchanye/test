@@ -313,15 +313,20 @@ def download_images(round, img_keyword):
 # 上傳圖片 並取得url
 def upload_to_imgur(img_path):
     
-    # Imgur API 密鑰
-    client_id = "1c126fdbf51fd36"
-    # client_secret = "e923e678d27d8f019913f26511a4d02d060899ba"
-    title = "Uploaded with PyImgur"
+    ## Imgur API 密鑰
+    # client_id = "1c126fdbf51fd36"
+    ## client_secret = "e923e678d27d8f019913f26511a4d02d060899ba"
+    # title = "Uploaded with PyImgur"
     
-    im = pyimgur.Imgur(client_id)
-    # 上傳圖片並獲取圖片的 URL
-    uploaded_image = im.upload_image(img_path, title=title)
-    image_url = uploaded_image.link
+    #im = pyimgur.Imgur(client_id)
+    ## 上傳圖片並獲取圖片的 URL
+    #uploaded_image = im.upload_image(img_path, title=title)
+    #image_url = uploaded_image.link
+
+    # 使用 Flask 请求对象获取服务器的基本 URL
+    server_base_url = request.base_url
+    # 构建完整的图像 URL
+    image_url = server_base_url + img_path
     
     img_message = ImageSendMessage(
         original_content_url=f'{image_url}',  
