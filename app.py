@@ -43,6 +43,7 @@ WAITING_FOR_FOOD_NAME = 1
 WAITING_FOR_QUERY_NUM = 2
 WAITING_FOR_IMG = 3
 NORMAL = 0
+current_state = None
 search_results = []
 
 @handler.add(MessageEvent, message=TextMessage)
