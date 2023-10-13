@@ -19,7 +19,7 @@ import os
 import requests
 import re
 import base64
-
+from github import Github
 
 
 from flask import Flask
@@ -79,8 +79,10 @@ def handle_message(event):
                 query_number = int(user_message)
                 img_keyword, message = query(query_number, search_results)
                 
-                img_path = download_images(1, img_keyword)
-                img_message = upload_to_imgur(img_path)
+                img_url = download_images_and_upload_to_github(1, 'your_image_keyword', github_token)
+                img_message = ImageSendMessage(
+                              original_content_url=f'{img_url}',  
+                              preview_image_url=f'{img_url}')
                 
                 messages = [message , img_message]
                 line_bot_api.reply_message(event.reply_token, messages)
@@ -227,79 +229,68 @@ def init_browser(img_keyword):
     return browser
 
 
-# 下載圖片
-def download_images(round, img_keyword):
+def download_images_and_upload_to_github(round, img_keyword, github_token):
+    # Initialize the browser
     browser = init_browser(img_keyword)
     local_folder = 'imgs2'
     
-    if not os.path.exists(local_folder): # 資料夾不存在時創建一個
+    if not os.path.exists(local_folder):
         os.makedirs(local_folder)
         
-    # img_url_dic = [] # 記錄下載過的圖片地址，避免重複下載
-    # count = 0  # 圖片序號
-    data_url_count = 0  # 計數 Data URL 圖片數量
-    max_image_size = 1024 * 1024  # 目前圖片限制大小為 1 MB
+    data_url_count = 0
+    max_image_size = 1024 * 1024
+    github_repo = 'wuchanye/test'  # Replace with your GitHub repository
+    github_path = 'imgs2/' + img_keyword + '.jpg'
     
     for i in range(round):
         try:
-            # 分析網頁,找到圖片元素
             parent_element = WebDriverWait(browser, 20).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, '.islrc')))
             
             img_elements = WebDriverWait(parent_element, 20).until(
                 EC.presence_of_all_elements_located((By.TAG_NAME, 'img')))
             
-            # 遍歷元素 鎖定需要的屬性
             for element in img_elements:
                 img_url = element.get_attribute('src')
                 
-                img_attributes = element.get_attribute('outerHTML') # 獲取 img 標籤中的"所有"屬性
+                img_attributes = element.get_attribute('outerHTML')
                 
-                # 確保'img_url'是一個字符串，排除 get_attribute('src') 返回 None 或其他非字符串值的問題。
                 if isinstance(img_url, str):
-                    
-                    # 判斷是否是 Data URL
-                    if img_url.startswith('data:image/jpeg'): 
-                        if 'data-sz' not in img_attributes:  # 避免下載到網站小圖標
-                            if data_url_count == 0: # 跳過第一張
+                    if img_url.startswith('data:image/jpeg'):
+                        if 'data-sz' not in img_attributes:
+                            if data_url_count == 0:
                                 data_url_count += 1
-                                continue  # 經過試驗 第二張好於第一張
+                                continue
                             else:
-                                img_data = re.search(r'base64,(.*)', img_url).group(1) # 提取 Data URL 中的圖片數據, 利用正則表達式捕獲base64,後面的全部
-                                image_data = base64.b64decode(img_data)  # 解碼圖片數據成二進制數據
+                                img_data = re.search(r'base64,(.*)', img_url).group(1)
+                                image_data = base64.b64decode(img_data)
                                 
                                 if len(image_data) < max_image_size:
-                                    image = Image.open(BytesIO(image_data)) # 將圖片數據轉換為圖片對象
-                                    image = image.convert("RGB") # 將圖片轉換為 RGB 模式
+                                    image = Image.open(BytesIO(image_data))
+                                    image = image.convert("RGB")
                                     
-                                    # 下載並保存圖片到當前目錄下
-                                    #filename = f'./imgs/{img_keyword}_{str(count)}.jpg'
-                                    filename = f'./imgs2/{img_keyword}.jpg'
-                                    image.save(filename)
+                                    # Save the image locally
+                                    local_filename = f'./{local_folder}/{img_keyword}.jpg'
+                                    image.save(local_filename)
+                                    
+                                    # Upload the image to GitHub
+                                    upload_image_to_github(local_filename, github_repo, github_path, github_token)
+                                    img_url = f'https://raw.githubusercontent.com/{github_repo}/main/img2/{img_keyword}.jpg'
+                                    return img_url
                                     break
-                                    #count += 1
-                                    #print('this is ' + str(count) + 'st img')
-                                    # time.sleep(0.2) # 防止反爬機制
                     else:
-                        
-                        if len(img_url) <= 200: # URL太長基本上就不是圖片的URL，先過濾掉，爬後面的
-                            
-                            # 判斷是否是普通的 PNG 圖檔
-                            if 'images' in img_url: 
-                                
-                                # 下載並保存圖片到當前目錄下
-                                #filename = f'./imgs/{img_keyword}_{str(count)}.jpg'
-                                filename = f'./imgs2/{img_keyword}.jpg'
+                        if len(img_url) <= 200:
+                            if 'images' in img_url:
+                                local_filename = f'./{local_folder}/{img_keyword}.jpg'
                                 r = requests.get(img_url)
                                 if len(r.content) < max_image_size:
-                                    with open(filename, 'wb') as file:
+                                    with open(local_filename, 'wb') as file:
                                         file.write(r.content)
                                         file.close()
+                                        upload_image_to_github(local_filename, github_repo, github_path, github_token)
+                                        img_url = f'https://raw.githubusercontent.com/{github_repo}/main/img2/{img_keyword}.jpg'
+                                        return img_url
                                         break
-                                        #count += 1
-                                        #print('this is ' + str(count) + 'st img')
-                                        # time.sleep(0.2) # 防止反爬機制
-                      
         except StaleElementReferenceException:
             print("出現StaleElementReferenceException錯誤，重新定位元素")
             continue
@@ -307,33 +298,31 @@ def download_images(round, img_keyword):
     time.sleep(0.5)
     browser.close()
     print("爬取完成") 
-    return filename                    
 
+def upload_image_to_github(local_filename, github_repo, github_path, github_token):
+    with open(local_filename, 'rb') as file:
+        content = file.read()
 
-# 上傳圖片 並取得url
-def upload_to_imgur(img_path):
+    headers = {
+        "Authorization": f"Bearer {github_token}",
+        "Content-Type": "application/json",
+    }
     
-    ## Imgur API 密鑰
-    # client_id = "1c126fdbf51fd36"
-    ## client_secret = "e923e678d27d8f019913f26511a4d02d060899ba"
-    # title = "Uploaded with PyImgur"
-    
-    #im = pyimgur.Imgur(client_id)
-    ## 上傳圖片並獲取圖片的 URL
-    #uploaded_image = im.upload_image(img_path, title=title)
-    #image_url = uploaded_image.link
+    url = f"https://api.github.com/repos/{github_repo}/contents/{github_path}"
+    data = {
+        "message": "Add image",
+        "content": base64.b64encode(content).decode('utf-8'),
+    }
 
-    # 使用 Flask 请求对象获取服务器的基本 URL
-    server_base_url = request.base_url
-    # 构建完整的图像 URL
-    image_url = server_base_url + img_path
-    
-    img_message = ImageSendMessage(
-        original_content_url=f'{image_url}',  
-        preview_image_url=f'{image_url}'  
-    )
-    return img_message
+    response = requests.put(url, headers=headers, json=data)
 
+    if response.status_code == 200:
+        print("Image uploaded to GitHub successfully.")
+        
+        
+    else:
+        print("Failed to upload image to GitHub.")
+        print(response.text)
 
 
 # 主程式
