@@ -220,9 +220,12 @@ def init_browser(img_keyword):
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-infobars") # 禁用一些瀏覽器的信息欄
+
+    chrome_options.binary_location = '/usr/bin/chromium'  # 设置 Chrome 的二进制路径
+    chromedriver_path = '/usr/local/bin/chromedriver'  # 设置 ChromeDriver 的路径
     
     # 創建一個帶有特定配置的 Chrome 瀏覽器實例
-    browser = webdriver.Chrome(options=chrome_options)
+    browser = webdriver.Chrome(executable_path=chromedriver_path, options=chrome_options)
     
     browser.get(url)
     browser.maximize_window()
