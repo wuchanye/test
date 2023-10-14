@@ -77,7 +77,7 @@ def handle_message(event):
                 github_repo = 'wuchanye/test'
                 github_path = 'imgs2/' + img_keyword + '.jpg'
                 github_token = os.environ.get('github_token')
-                img_path = download_images_with_beautifulsoup(1, img_keyword):
+                img_path = download_images_with_beautifulsoup(1, img_keyword)
                 img_message = upload_image_to_github(img_path, github_repo, github_path, github_token)
 
                 messages = [message , img_message]
