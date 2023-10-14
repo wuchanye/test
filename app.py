@@ -9,6 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 from io import BytesIO
 from PIL import Image
 import pyimgur
@@ -221,10 +222,8 @@ def init_browser(img_keyword):
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-infobars") # 禁用一些瀏覽器的信息欄
-
-    chrome_options.binary_location = '/usr/bin/chromium'  # 设置 Chrome 的二进制路径
-
-    service = Service(executable_path='/usr/local/bin/chromedriver')
+    service = Service(ChromeDriverManager().install())
+    
     # 創建一個帶有特定配置的 Chrome 瀏覽器實例
     browser = webdriver.Chrome(service=service, options=chrome_options)
     
