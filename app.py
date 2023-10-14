@@ -3,13 +3,6 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, ImageSendMessage
 from opencc import OpenCC
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import StaleElementReferenceException
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 from io import BytesIO
 from PIL import Image
 import pyimgur
@@ -21,6 +14,7 @@ import os
 import requests
 import re
 import base64
+from bs4 import BeautifulSoup
 
 
 from flask import Flask
@@ -83,7 +77,7 @@ def handle_message(event):
                 github_repo = 'wuchanye/test'
                 github_path = 'imgs2/' + img_keyword + '.jpg'
                 github_token = os.environ.get('github_token')
-                img_path = download_images_and_upload_to_github(1, img_keyword, github_repo,github_path, github_token)
+                img_path = download_images_with_beautifulsoup(1, img_keyword):
                 img_message = upload_image_to_github(img_path, github_repo, github_path, github_token)
 
                 messages = [message , img_message]
@@ -215,85 +209,49 @@ def query(query_number,search_results):
     return fftraditional_name , message
 
 
-# 獲取Chrome驅動，訪問URL
-def init_browser(img_keyword):
-    url = f'https://www.google.com.hk/search?q={img_keyword}&tbm=isch'
+def download_images_with_beautifulsoup(round, img_keyword):
     
-    chrome_options = webdriver.ChromeOptions()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-infobars") # 禁用一些瀏覽器的信息欄
-    service = Service(ChromeDriverManager().install())
-    
-    # 創建一個帶有特定配置的 Chrome 瀏覽器實例
-    browser = webdriver.Chrome(service=service, options=chrome_options)
-    
-    browser.get(url)
-    browser.maximize_window()
-    
-    return browser
-
-
-def download_images_and_upload_to_github(round, img_keyword, github_repo,github_path, github_token):
-    # Initialize the browser
-    browser = init_browser(img_keyword)
     local_folder = 'imgs2'
-    
-    if not os.path.exists(local_folder):
+    if not os.path.exists(local_folder): # 資料夾不存在時創建一個
         os.makedirs(local_folder)
         
-    data_url_count = 0
-    max_image_size = 1024 * 1024
+    url = f'https://www.google.com.hk/search?q={img_keyword}&tbm=isch'
+    resp = requests.get(url)
+    soup = BeautifulSoup(resp.text, 'lxml')
     
+    data_url_count = 0  # 計數 Data URL 圖片數量
+    max_image_size = 1024 * 1024  # 目前圖片限制大小為 1 MB
     
     for i in range(round):
         try:
-            parent_element = WebDriverWait(browser, 20).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, '.islrc')))
+            img_elements = soup.find_all('img')
             
-            img_elements = WebDriverWait(parent_element, 20).until(
-                EC.presence_of_all_elements_located((By.TAG_NAME, 'img')))
-            
+            # 遍歷元素 鎖定需要的屬性 
             for element in img_elements:
-                img_url = element.get_attribute('src')
+                img_url = element.get('src')
                 
-                img_attributes = element.get_attribute('outerHTML')
-                
+                # 確保'img_url'是一個字符串，排除 get_attribute('src') 返回 None 或其他非字符串值的問題。
                 if isinstance(img_url, str):
-                    if img_url.startswith('data:image/jpeg'):
-                        if 'data-sz' not in img_attributes:
-                            if data_url_count == 0:
-                                data_url_count += 1
-                                continue
-                            else:
-                                img_data = re.search(r'base64,(.*)', img_url).group(1)
-                                image_data = base64.b64decode(img_data)
-                                
-                                if len(image_data) < max_image_size:
-                                    image = Image.open(BytesIO(image_data))
-                                    image = image.convert("RGB")
-                                    
-                                    # Save the image locally
-                                    filename = f'./{local_folder}/{img_keyword}.jpg'
-                                    image.save(filename)
+                    if img_url.startswith('https://'):
+                        if data_url_count == 0: # 跳過第一張
+                            data_url_count += 1
+                            continue  # 經過試驗 第二張好於第一張
+                        else:
+                            print(img_url)
+                            filename = f'./{local_folder}/{img_keyword}.jpg'
+                            r = requests.get(img_url)
+                            if len(r.content) < max_image_size:
+                                with open(filename, 'wb') as file:
+                                    file.write(r.content)
+                                    file.close()
                                     break
-                    else:
-                        if len(img_url) <= 200:
-                            if 'images' in img_url:
-                                local_filename = f'./{local_folder}/{img_keyword}.jpg'
-                                r = requests.get(img_url)
-                                if len(r.content) < max_image_size:
-                                    with open(local_filename, 'wb') as file:
-                                        file.write(r.content)
-                                        file.close()
-                                        break
-        except StaleElementReferenceException:
-            print("出現StaleElementReferenceException錯誤，重新定位元素")
+                            print("爬取完成")
+                            time.sleep(0.5)
+                            return filename 
+        except Exception as e:
+            print(f"出现错误：{str(e)}")
             continue
-        
-    time.sleep(0.5)
-    browser.close()
-    print("爬取完成") 
-    return filename 
+    
 
 def upload_image_to_github(local_filename, github_repo, github_path, github_token):
     with open(local_filename, 'rb') as file:
