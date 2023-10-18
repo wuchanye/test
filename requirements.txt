@@ -6,7 +6,6 @@ requests
 Gunicorn
 beautifulsoup4
 lxml
-DB_Control
 psycopg2
 pandas
 google-cloud-vision
