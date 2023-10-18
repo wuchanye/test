@@ -24,8 +24,7 @@ import time
 import tempfile
 from datetime import datetime, timedelta
 
-global line_bot_api
-line_bot_api = LineBotApi('dhX8nvPCDm0VOdFugXpTvezKPKsw7coeISdVz28SQ7WMQ7cTj0M8IBtE/L+qaWj4iwUaKv+2S8zhsUda4sfGHMncEVlacKwO8zrP4PTzcTeOvHaXDpSAONV4M/aNfXAlFEkQmlDlPRFUih/jhZk3fAdB04t89/1O/w1cDnyilFU=')
+line_bot_api = LineBotApi(os.environ.get('line_channel_token'))
 handler = WebhookHandler('8488ba547e8aeb4a4255b31562637275')
 
 db_using=db
