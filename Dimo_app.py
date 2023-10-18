@@ -111,7 +111,7 @@ def handle_image_message(event):
         image_path=image_path.replace("\\","/" )
         ocr.OCR(image_path,message_id)
     except Exception as e:        
-        reply_message = "上傳圖片發生錯誤，请稍後再试。"
+        reply_message = "上傳圖片發生錯誤，请稍後再试"
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_message))
         print(str(e))
             
