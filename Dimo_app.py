@@ -25,7 +25,7 @@ import tempfile
 from datetime import datetime, timedelta
 
 line_bot_api = LineBotApi(os.environ.get('line_channel_token'))
-handler = WebhookHandler('os.environ.get('line_secret')')
+handler = WebhookHandler(os.environ.get('line_secret'))
 
 db_using=db
 
