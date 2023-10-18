@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon"> 
+    <title>食品營養資訊</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+</head>
+<body>
+    <div class="row" style="margin: 10px">
+        <div class="col-12" style="margin: 10px">
+            <label>食品名稱</label>
+            <input type="text" id="food_name" class="form-control" placeholder="輸入食品名稱">
+            <br />
+
+            <label>份量</label>
+            <input type="number" id="portion" class="form-control" placeholder="輸入份量" min="1">
+            <br />
+
+            <label>熱量 (大卡)</label>
+            <input type="number" id="calories" class="form-control" placeholder="輸入熱量" min="0">
+            <br />
+
+            <label>蛋白質 (g)</label>
+            <input type="number" id="protein" class="form-control" placeholder="輸入蛋白質" min="0">
+            <br />
+
+            <label>脂質 (g)</label>
+            <input type="number" id="fat" class="form-control" placeholder="輸入脂質" min="0">
+            <br />
+
+            <label>碳水化合物 (g)</label>
+            <input type="number" id="carbohydrates" class="form-control" placeholder="輸入碳水化合物" min="0">
+            <br />
+
+            <button class="btn btn-success btn-block" id="btn_record">記錄</button>
+        </div>
+    </div>
+    <!-- 查看填寫引導按鈕 -->
+    <button class="btn btn-info" id="btn_show_guide">查看填寫引導</button>
+
+    <!-- 資料確認模態對話框 -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmationModalLabel">確認您的資料</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- 這裡顯示資料確認內容，根據使用者填寫的資料動態生成 -->
+                    <p id="confirmationInfo"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">重新填寫</button>
+                    <button type="button" class="btn btn-primary" id="btn_confirm">確認提交</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 填寫引導模態對話框 -->
+    <div class="modal fade" id="guideModal" tabindex="-1" role="dialog" aria-labelledby="guideModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="guideModalLabel">填寫引導</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <img src="https://i.imgur.com/8SaNF06.jpg" alt="引導圖片" class="img-fluid">
+                    <h5>請參照食品營養標籤上的資訊填寫下面的表單。</h5>
+                    <p>1．請依照紅框指示，僅需填寫「每份」的營養素數值即可。</p>
+                    <p>2．「份量」欄位，請以實際食用之數值填寫</p>
+                    <p>(如上圖，喝一瓶即等於 1 份(藍色框)，在份量單位填寫數字1。)</p>  
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">開始填寫</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js"></script>
+    <script>
+        // ... 其他 JavaScript 代碼 ...
+
+        function initializeLiff(myLiffId) {
+            const liffId = myLiffId;
+            liff.init({ liffId });
+        }
+
+        function validateInput() {
+            const foodName = $("#food_name").val();
+            const portion = $("#portion").val();
+            const calories = parseFloat($("#calories").val());
+            const protein = parseFloat($("#protein").val());
+            const fat = parseFloat($("#fat").val());
+            const carbohydrates = parseFloat($("#carbohydrates").val());
+
+            if (!foodName || !portion || isNaN(calories) || isNaN(protein) || isNaN(fat) || isNaN(carbohydrates)) {
+                alert('所有欄位都必須填寫！');
+                return null;
+            }
+            if ( portion > 20 ) {
+                alert('請輸入合理的份量！');
+                return null;
+            }
+            if (calories > 2000 ) {
+                alert('請輸入合理的熱量！');
+                return null;
+            }
+            if (protein > 100 ) {
+                alert('請輸入合理的熱量！');
+                return null;
+            }
+            if (fat > 200 ) {
+                alert('請輸入合理的熱量！');
+                return null;
+            }
+            if (carbohydrates > 500 ) {
+                alert('請輸入合理的熱量！');
+                return null;
+            }
+
+            return {
+                foodName,
+                portion,
+                calories,
+                protein,
+                fat,
+                carbohydrates
+            };
+        }
+
+        function showConfirmationDialog(foodInfo) {
+            // 生成資料確認內容，根據使用者填寫的資料
+            const confirmationInfo = `食品名稱: ${foodInfo.foodName}<br>份量: ${foodInfo.portion}<br>熱量: ${foodInfo.calories} 大卡<br>蛋白質: ${foodInfo.protein} g<br>脂質: ${foodInfo.fat} g<br>碳水化合物: ${foodInfo.carbohydrates} g`;
+            $('#confirmationInfo').html(confirmationInfo);
+
+            // 打開模態對話框
+            $('#confirmationModal').modal('show');
+        }
+
+        function sendFoodInfo() {
+            const foodInfo = validateInput();
+            if (foodInfo) {
+                const msg = `###食品營養資訊###\n食品名稱: ${foodInfo.foodName}\n份量: ${foodInfo.portion}\n熱量: ${foodInfo.calories} 大卡\n蛋白質: ${foodInfo.protein} g\n脂質: ${foodInfo.fat} g\n碳水化合物: ${foodInfo.carbohydrates} g`;
+                
+                liff.sendMessages([
+                    {
+                        type: 'text',
+                        text: msg
+                    },
+                ])
+                    .then(() => {
+                        liff.closeWindow();
+                    })
+                    .catch((error) => {
+                        window.alert('Error sending message: ' + error);
+                    });
+            }
+        }
+
+        $(document).ready(function () {
+            initializeLiff('{{ liffid }}');
+
+            // 當首次載入網頁時，自動顯示填寫引導模態對話框
+            $('#guideModal').modal('show');
+
+            $('#btn_record').click(function (e) {
+                const foodInfo = validateInput();
+                if (foodInfo) {
+                    showConfirmationDialog(foodInfo);
+                }
+            });
+
+            $('#btn_confirm').click(function (e) {
+                sendFoodInfo();
+                $('#confirmationModal').modal('hide');
+            });
+        });
+
+        // 點擊 "查看填寫引導" 按鈕時顯示填寫引導模態對話框
+        $('#btn_show_guide').click(function (e) {
+            $('#guideModal').modal('show');
+        });
+    </script>
+</body>
+</html>
