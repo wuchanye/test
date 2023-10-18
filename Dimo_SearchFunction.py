@@ -6,10 +6,12 @@ Created on Sat Apr 29 15:35:14 2023
 """
 from linebot.models import QuickReplyButton,MessageAction,PostbackAction,QuickReply, MessageEvent, TextMessage, PostbackEvent, TextSendMessage, TemplateSendMessage, ConfirmTemplate, MessageTemplateAction, ButtonsTemplate, PostbackTemplateAction, URITemplateAction, CarouselTemplate, CarouselColumn, ImageCarouselTemplate, ImageCarouselColumn, FlexSendMessage
 import DB_Control as db
-from Dimo_app import line_bot_api
+import os
+from linebot import LineBotApi
 import rolltools_api_0717 as api
 
 db_using=db
+line_bot_api = LineBotApi(os.environ.get('line_bot_api'))
 
 credential_pool = [
     {'appid':'uxnxyhgkujxpgqbt','secret':'UHJqRjR6S25DaSttRWxZUElSbnovUT09'},
