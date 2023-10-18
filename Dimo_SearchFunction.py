@@ -11,7 +11,7 @@ from linebot import LineBotApi
 import rolltools_api_0717 as api
 
 db_using=db
-line_bot_api = LineBotApi(os.environ.get('line_bot_api'))
+line_bot_api = LineBotApi(os.environ.get('line_channel_token'))
 
 credential_pool = [
     {'appid':'uxnxyhgkujxpgqbt','secret':'UHJqRjR6S25DaSttRWxZUElSbnovUT09'},
