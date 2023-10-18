@@ -1,8 +1,12 @@
 flask
 line-bot-sdk==1.8.0
-opencc-python-reimplemented
 Pillow
 pyimgur
 requests
 Gunicorn
 beautifulsoup4
+DB_Control
+psycopg2
+pandas
+google-cloud-vision
+opencv-python
