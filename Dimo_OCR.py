@@ -1,13 +1,19 @@
 import cv2
 from google.cloud import vision_v1
-import io
+import requests
+import base64
+import numpy as np
 
-def OCR(img_path,img_id):
-    print(img_path)
-    print(img_id)
-    new_size = (800, 800)
+
+
+def OCR(image_data,img_id):
     # 讀取並重新調整圖片大小
-    original_image = cv2.imread(img_path)
+    new_size = (800, 800)
+    
+    # 将二进制数据转换为 NumPy 数组
+    image_array = np.frombuffer(image_data, np.uint8)
+    # 使用 OpenCV 读取图像
+    original_image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
     resized_image = resize_image(original_image, new_size)
 
     # 尋找主要方框並繪製
@@ -17,18 +23,19 @@ def OCR(img_path,img_id):
     if main_box is not None:
         x, y, w, h = cv2.boundingRect(main_box)
         cropped_image = resized_image[y:y+h, x:x+w]
-
-        # 保存裁剪後的圖像
-        cv2.imwrite(f'./Ocr_temp/Nutrition_Label_{img_id}.jpg', cropped_image)
+        
+        # 将图像转换为二进制数据
+        success, image_data = cv2.imencode('.jpg', cropped_image)
+        if success:
+            image_content = image_data.tobytes()
+            upload_image_to_github(image_content, img_id)
 
         # 使用 Google Cloud Vision API 提取文本
-        credentials_path = 'mindful-marking-400311-b4645f955373.json'  # 自己路徑的Json檔名
-        extracted_text = extract_text_from_image(f'./Ocr_temp/Nutrition_Label_{img_id}.jpg', credentials_path)
+        credentials_path = '/etc/secrets/google_application_credentials'   # Json憑證的路徑>>上render需設置secret file, 不從本機獲取
+        extracted_text = extract_text_from_image(image_content, credentials_path)
 
         # 將提取的文本整理成字典
         extracted_text_dict = {'text': extracted_text}
-
-        # 顯示提取的文本
         print(extracted_text_dict)
     else:
         print('未找到主要方框，無法識別文字。')
@@ -59,16 +66,12 @@ def find_main_nutrition_box(image):
 
     return image, main_box
 
-def extract_text_from_image(image_path, credentials_path):
+def extract_text_from_image(image_content, credentials_path):
     # 使用認證憑據文件創建Vision API客户端
     client = vision_v1.ImageAnnotatorClient.from_service_account_file(credentials_path)
 
-    # 讀取圖片文件
-    with io.open(image_path, 'rb') as image_file:
-        content = image_file.read()
-
     # 創建圖片對象
-    image = vision_v1.Image(content=content)
+    image = vision_v1.Image(content=image_content)
 
     # 使用文本檢测功能識别圖片中的文字
     response = client.text_detection(image=image)
@@ -80,33 +83,50 @@ def extract_text_from_image(image_path, credentials_path):
             extracted_text.append(text.description)
     return extracted_text
 
-if __name__ == '__main__':
-    # 圖片文件路径
-    image_path = 'food_packaging18.jpg'
-    new_size = (800, 800)
-    # 讀取並重新調整圖片大小
-    original_image = cv2.imread(image_path)
-    resized_image = resize_image(original_image, new_size)
+def upload_image_to_github(image_content, img_id):
+    # print(image_content)
+    github_username = 'wuchanye'
+    github_repo = 'test'
+    github_folder = 'Ocr_temp'
+    github_token = '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'
+    filename = img_id + '.jpg'
+    current_sha = None
+    
+    # with open('saved_image.jpg', 'wb') as file:
+    #     file.write(image_content)
+    
+    url = f'https://api.github.com/repos/{github_username}/{github_repo}/contents/{github_folder}/{filename}'
+    headers = {
+        'Authorization': f'Bearer {github_token}',
+        'Content-Type': 'application/json',
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        content = response.json()
+        if 'sha' in content:
+            current_sha = content['sha']
+    
+    
+    
+    headers = {
+        'Authorization': f'Bearer {github_token}',
+        'Content-Type': 'application/json',
+    }
+    
 
-    # 尋找主要方框並繪製
-    result_image, main_box = find_main_nutrition_box(resized_image)
+    data = {
+        'message': 'Update image',
+        'content': base64.b64encode(image_content).decode('utf-8'),
+        'sha': current_sha
+    }
 
-    # 裁切方框內的影像
-    if main_box is not None:
-        x, y, w, h = cv2.boundingRect(main_box)
-        cropped_image = resized_image[y:y+h, x:x+w]
+    response = requests.put(url, headers=headers, json=data)
+    print(response.status_code)
 
-        # 保存裁剪後的圖像
-        cv2.imwrite('Cropped_Nutrition_Label.jpg', cropped_image)
-
-        # 使用 Google Cloud Vision API 提取文本
-        credentials_path = 'ocr-test-400305-7bc7fdca3379.json'  # 自己路徑的Json檔名
-        extracted_text = extract_text_from_image('Cropped_Nutrition_Label.jpg', credentials_path)
-
-        # 將提取的文本整理成字典
-        extracted_text_dict = {'text': extracted_text}
-
-        # 顯示提取的文本
-        print(extracted_text_dict)
+    if response.status_code == 200 or response.status_code ==201:
+        print("文件已成功更新到GitHub存储库的文件夹。")
+        # image_url = response.json().get('content').get('download_url')
+        # print(img_id)
     else:
-        print('未找到主要方框，無法識別文字。')
+        print(f"上传文件失败，HTTP响应代码: {response.status_code}")
+        print(f"响应内容: {response.text}")
