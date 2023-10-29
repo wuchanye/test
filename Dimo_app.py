@@ -81,39 +81,20 @@ TEMP_IMAGE_DIRECTORY = "./Ocr_temp/"
 def handle_image_message(event):
     # 取得使用者 ID
     user_id = event.source.user_id
-
-    # 取得圖片訊息中的圖片 ID
+    # try:
+        # 取得圖片訊息中的圖片 ID
     message_id = event.message.id
-
+    
     # 获取用户发送的图像消息
     message_content = line_bot_api.get_message_content(message_id)
+    image_data = message_content.content
+    ocr.OCR(image_data,message_id)
 
-    try:
-    # 创建临时目录，如果不存在
-        os.makedirs(TEMP_IMAGE_DIRECTORY, exist_ok=True)
     
-        # 创建临时文件，确保文件名唯一
-        with tempfile.NamedTemporaryFile(dir=TEMP_IMAGE_DIRECTORY, delete=False, suffix='.png') as temp_file:
-            # 写入图像数据到临时文件
-            for chunk in message_content.iter_content():
-                temp_file.write(chunk)
-    
-        # 获取临时文件的路径
-        image_path = temp_file.name
-        
-        message = TextSendMessage(
-                    text = "上傳圖片成功！\n請稍後辨識結果"
-            )
-        line_bot_api.reply_message(event.reply_token,message)
-        
-    
-        print(image_path)
-        image_path=image_path.replace("\\","/" )
-        ocr.OCR(image_path,message_id)
-    except Exception as e:        
-        reply_message = "上傳圖片發生錯誤，请稍後再试"
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_message))
-        print(str(e))
+    message = TextSendMessage(
+                text = "上傳圖片成功！\n請稍後辨識結果"
+        )
+    line_bot_api.reply_message(event.reply_token,message)
             
 @handler.add(PostbackEvent) #PostbackTemplateAction 觸發此事件
 def handle_postback(event):
