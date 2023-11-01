@@ -99,7 +99,7 @@ def handle_message(event):
             record_foodInfo(event, mtext, user_id)
         elif mtext in keyWordList :
             None
-	elif user_id not in chatMode:
+        elif user_id not in chatMode:
             Dimo_search.searching(event, mtext, user_id)
         elif  user_id in chatMode:
             if chatMode[user_id].get('mode')=='systemUse':
