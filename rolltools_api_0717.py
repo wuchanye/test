@@ -1,8 +1,8 @@
+from opencc import OpenCC
 import urllib.request as request
 import urllib.parse as parse
 import os
 import requests
-import re
 import base64
 import json
 import time
