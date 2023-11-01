@@ -124,7 +124,7 @@ def query(appid,secret,food_id,unit,picON):
     carbohydrate = data["data"]["carbohydrate"]
     carbohydrate_unit = data["data"]["carbohydrateUnit"]
     print("名稱：",name,"\n熱量：",calory,calory_unit,"\n蛋白質：",protein,protein_unit,"\n脂質：",fat,fat_unit,"\n碳水化合物：",carbohydrate,carbohydrate_unit)
-    print('IMAGE_PATH='+str(img))
+    # print('IMAGE_PATH='+str(img))
     image_url=upload_image_to_github(image_content, name, github_token)
     data={'name':name,'calory':calory,'protein':protein,'fat':fat,'carb':carbohydrate}
     dataAndunit={'name':name,'calory':calory+' '+ calory_unit,'protein':protein+' '+protein_unit,'fat':fat+' '+fat_unit,'carb':carbohydrate+' '+carbohydrate_unit}
