@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon"> 
+    <title>Get User ID</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+    
+</head>
+<body>
+
+<p>網頁跳轉中，請稍後...</p>
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js"></script>
+<script>
+    function initializeLiff(myLiffId) {
+        liff.init({
+            liffId: myLiffId
+        }).then(() => {
+            // 確保LIFF已初始化
+            liff.getProfile().then(profile => {
+                const userID = profile.userId;
+                //alert(userID);  // 顯示userID
+
+                fetch('/viewUserInfo', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `userID=${userID}`  // 使用模板字符串
+                }).then(response => {
+                    if (response.ok) {
+                        window.location.href = response.url;
+                    }
+                    throw new Error('Network response was not ok.');
+                }).then(text => {
+                    document.body.innerHTML = text;
+                }).catch(error => {
+                    console.log('There was a problem with the fetch operation:', error.message);
+                });
+            }).catch(err => {
+                console.log("error", err);
+            });
+        }).catch(err => {
+            console.log("LIFF initialization failed", err);
+        });
+    }
+
+    $(document).ready(function () {
+        initializeLiff('{{ liffid }}');
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon"> 
+    <title>使用者資訊記錄</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+</head>
+<body>
+    <div class="row" style="margin: 10px">
+        <div class="col-12" style="margin: 10px">
+            <label>性別</label>
+            <div>
+                <input type="radio" id="gender_male" name="gender" value="男性">
+                <label for="gender_male">男性</label>
+                <input type="radio" id="gender_female" name="gender" value="女性">
+                <label for="gender_female">女性</label>
+            </div>
+            <br />
+
+            <label>身高 (cm)</label>
+            <input type="number" id="height" class="form-control" placeholder="請輸入身高" min="0">
+            <br />
+
+            <label>體重 (kg)</label>
+            <input type="number" id="weight" class="form-control" placeholder="請輸入體重" min="0">
+            <br />
+
+            <label>平均運動強度</label>
+            <select id="exercise_intensity" class="form-control">
+                <option>低強度</option>
+                <option>中強度</option>
+                <option>高強度</option>
+            </select>
+            <br />
+
+            <label>體態目標</label>
+            <select id="fitness_goal" class="form-control">
+                <option>減重</option>
+                <option>維持</option>
+                <option>增重</option>
+            </select>
+            <br />
+
+            <button class="btn btn-success btn-block" id="btn_record">記錄</button>
+            <button class="btn btn-secondary btn-block" id="btn_reset">恢復預設值</button>
+        </div>
+    </div>
+    <!-- 資料確認模態對話框 -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmationModalLabel">確認您的資料</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- 這裡顯示資料確認內容，根據使用者填寫的資料動態生成 -->
+                    <p id="confirmationInfo"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">重新填寫</button>
+                    <button type="button" class="btn btn-primary" id="btn_confirm">確認提交</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js"></script>
+    <script>
+
+        const defaultUserInfo = {
+                gender: "{{ user_info['gender'] }}",
+                height: "{{ user_info['height'] }}",
+                weight: "{{ user_info['weight'] }}",
+                exerciseIntensity: "{{ user_info['exerciseIntensity'] }}",
+                fitnessGoal: "{{ user_info['fitnessGoal'] }}"
+            };
+
+        function initializeLiff(myLiffId) {
+            const liffId = myLiffId;
+            liff.init({ liffId });
+        }
+
+        function validateInput() {
+            const gender = $("input[name='gender']:checked").val();
+            const height = parseFloat($("#height").val());
+            const weight = parseFloat($("#weight").val());
+            const exerciseIntensity = $("#exercise_intensity").val();
+            const fitnessGoal = $("#fitness_goal").val();
+
+            if (!gender || isNaN(height) || isNaN(weight) || !exerciseIntensity || !fitnessGoal) {
+                alert('所有欄位都必須填寫！');
+                return null;
+            }
+
+            if (height < 60 || height > 250) {
+                alert('請輸入合理的身高！');
+                return null;
+            }
+
+            if (weight < 10 || weight > 200) {
+                alert('請輸入合理的體重！');
+                return null;
+            }
+
+            return {
+                gender,
+                height,
+                weight,
+                exerciseIntensity,
+                fitnessGoal
+            };
+        }
+
+        function showConfirmationDialog(userInfo) {
+            // 生成資料確認內容，根據使用者填寫的資料
+            const confirmationInfo = `性別: ${userInfo.gender}<br>身高: ${userInfo.height} cm<br>體重: ${userInfo.weight} kg<br>平均運動強度: ${userInfo.exerciseIntensity}<br>體態目標: ${userInfo.fitnessGoal}`;
+            $('#confirmationInfo').html(confirmationInfo);
+
+            // 打開模態對話框
+            $('#confirmationModal').modal('show');
+        }
+
+        function sendUserInfo() {
+            const userInfo = validateInput();
+            if (userInfo) {
+                const msg = `###我的基本資料###\n性別: ${userInfo.gender}\n身高: ${userInfo.height} cm\n體重: ${userInfo.weight} kg\n平均運動強度: ${userInfo.exerciseIntensity}\n體態目標: ${userInfo.fitnessGoal}`;
+                
+                liff.sendMessages([
+                    {
+                        type: 'text',
+                        text: msg
+                    },
+                ])
+                    .then(() => {
+                        liff.closeWindow();
+                    })
+                    .catch((error) => {
+                        window.alert('Error sending message: ' + error);
+                    });
+            }
+        }
+
+        // 定義恢復預設值的函數
+        function resetForm() {
+            populateForm(defaultUserInfo);
+        }
+
+        // 定義清除所有資訊的函數
+
+
+        function populateForm(userInfo) {
+            $(`input[name='gender'][value='${userInfo.gender}']`).prop("checked", true);
+            $("#height").val(userInfo.height);
+            $("#weight").val(userInfo.weight);
+            $("#exercise_intensity").val(userInfo.exerciseIntensity);
+            $("#fitness_goal").val(userInfo.fitnessGoal);
+        }
+        // 在文檔準備就緒時初始化 LIFF
+        $(document).ready(function () {
+            initializeLiff('{{ liffid }}');
+            resetForm();
+            // 恢復預設值按鈕
+            $('#btn_reset').click(function (e) {
+                resetForm();
+                alert('清除')
+            });
+
+            $('#btn_record').click(function (e) {
+                const userInfo = validateInput();
+                if (userInfo) {
+                    showConfirmationDialog(userInfo);
+                }
+            });
+
+            $('#btn_confirm').click(function (e) {
+                sendUserInfo();
+                $('#confirmationModal').modal('hide');
+            });
+        });
+    </script>
+</body>
+</html>
