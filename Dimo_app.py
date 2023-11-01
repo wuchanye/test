@@ -160,7 +160,7 @@ def handle_postback(event):
     elif postback_data=='change-to-systemMode' :
         chatMode[user_id]={'mode':'systemUse','data':None}
         message = TextSendMessage(
-                    text = '已切換至操作模式'chatMode[user_id].get('mode')
+                    text = '已切換至操作模式'+ chatMode[user_id].get('mode')
             )
         line_bot_api.reply_message(event.reply_token,message)
     elif postback_data=='systemMode':
@@ -172,7 +172,7 @@ def handle_postback(event):
     elif postback_data=='change-to-chatMode' :
         chatMode[user_id]={'mode':'chat','data':hist}
         message = TextSendMessage(
-                    text = '已切換至智能問答模式'chatMode[user_id].get('mode')
+                    text = '已切換至智能問答模式'+ chatMode[user_id].get('mode')
             )
         line_bot_api.reply_message(event.reply_token,message)
     elif postback_data=='chatMode':
