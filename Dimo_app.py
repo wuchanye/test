@@ -589,7 +589,7 @@ def recordWithCQ(event,keyword,user_id):
     elif(keyword=='確認紀錄'):
         if user_id in filling_quantity:
             filling_quantity.pop(user_id)
-    elif (isFloat(keyword)==False or keyword.isnumeric()):
+    elif (isFloat(keyword)==False or keyword.isnumeric()==False):
         message = TextSendMessage(
                     text = '請輸入數字',
                     quick_reply=(QuickReply(
@@ -663,7 +663,7 @@ def updateWithCQ(event,quantity,user_id):
     if(quantity=='確認修改'):
         if user_id in udQuantity:
             udQuantity.pop(user_id)
-    elif (isFloat(quantity)==False or quantity.isnumeric()):
+    elif (isFloat(quantity)==False or quantity.isnumeric()==False):
         message = TextSendMessage(
                     text = '請輸入數字',
                     quick_reply=(QuickReply(
