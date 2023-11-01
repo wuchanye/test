@@ -8,7 +8,6 @@ Created on Wed Apr 26 07:39:16 2023
 from flask import Flask
 app = Flask(__name__)
 
-
 from flask import request, abort, render_template, jsonify
 import os
 from linebot import LineBotApi, WebhookHandler
