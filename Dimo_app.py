@@ -22,6 +22,7 @@ import Dimo_OCR as ocr
 import time
 import tempfile
 from datetime import datetime, timedelta
+import DimoGPT as chat
 
 line_bot_api = LineBotApi(os.environ.get('line_channel_token'))
 handler = WebhookHandler(os.environ.get('line_secret'))
