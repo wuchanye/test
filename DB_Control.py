@@ -179,36 +179,87 @@ def queryfromDB(date,uid):
     except psycopg2.errors.UndefinedTable:
         return 'noTable'
 
-def deleteData(user_id,itemId,foodName,date):
-    try:
-        monthAndDay=date[5:]
-        month,day=monthAndDay.split("-")
+# def deleteData(user_id,itemId,foodName,date):
+#     try:
+#         monthAndDay=date[5:]
+#         month,day=monthAndDay.split("-")
         
-        table_name='dimorecord'+month+day
-        sql=f"""delete from {table_name} where id ='{itemId}' and user_id ='{user_id}' and food_name='{foodName}'   """
+#         table_name='dimorecord'+month+day
+#         sql=f"""delete from {table_name} where id ='{itemId}' and user_id ='{user_id}' and food_name='{foodName}'   """
+        
+#         with db_connection() as conn:
+#             cur=conn.cursor()
+#             cur.execute(sql)
+#             conn.commit()
+#             cur.close()
+        
+#         return True
+#     except:
+#         print('刪除資料時發生錯誤')
+#         return False
+def deleteData(user_id, itemId, foodName, date):
+    try:
+        monthAndDay = date[5:]
+        month, day = monthAndDay.split("-")
+        
+        table_name = 'dimorecord' + month + day
+        # 先確認資料是否存在
+        check_sql = f"""select count(*) from {table_name} where id ='{itemId}' and user_id ='{user_id}' and food_name='{foodName}'"""
         
         with db_connection() as conn:
-            cur=conn.cursor()
-            cur.execute(sql)
-            conn.commit()
-            cur.close()
-        
-        return True
-    except:
-        print('刪除資料時發生錯誤')
+            cur = conn.cursor()
+            cur.execute(check_sql)
+            count = cur.fetchone()[0]
+            if count == 0:
+                return '此筆資料已不存在，無法進行刪除操作'
+            else:
+            # 若資料存在，則進行刪除
+                delete_sql = f"""delete from {table_name} where id ='{itemId}' and user_id ='{user_id}' and food_name='{foodName}'"""
+                cur.execute(delete_sql)
+                conn.commit()
+                cur.close()
+                return True
+    except Exception as e:
+        print('刪除資料時發生錯誤:', e)
         return False
     
 def record_userInfo2Table(user_id,user_info):
-    sql=f"""
-        INSERT INTO user_info (user_id, gender, height, weight, exercise_intensity, fitness_goal)
-        VALUES ('{user_id}', '{user_info['性別']}','{user_info['身高']}','{user_info['體重']}','{user_info['平均運動強度']}','{user_info['體態目標']}')
-        """ 
+    sql=sql = f"""
+    DO $$
+    BEGIN
+        IF EXISTS (SELECT 1 FROM user_info WHERE user_id = '{user_id}') THEN
+            UPDATE user_info
+            SET
+                gender = '{user_info['性別']}',
+                height = '{user_info['身高']}',
+                weight = '{user_info['體重']}',
+                exercise_intensity = '{user_info['平均運動強度']}',
+                fitness_goal = '{user_info['體態目標']}'
+            WHERE user_id = '{user_id}';
+        ELSE
+            INSERT INTO user_info (user_id, gender, height, weight, exercise_intensity, fitness_goal)
+            VALUES ('{user_id}', '{user_info['性別']}', '{user_info['身高']}', '{user_info['體重']}', '{user_info['平均運動強度']}', '{user_info['體態目標']}');
+        END IF;
+    END $$;
+    """
     with db_connection() as conn:
         cur=conn.cursor()
         cur.execute(sql)
         conn.commit()
         cur.close()
     return True
+
+def view_user_info(user_id):
+    sql=f"""select * from user_info 
+            where user_id='{user_id}'"""
+    
+    with db_connection() as conn:
+        cur=conn.cursor()
+        cur.execute(sql)
+        result=cur.fetchall()
+        cur.close()
+    
+    return result[0]
 
 if __name__=='__main__':
     # result=queryfromDB('today','Ub5136c58845e8760da3979c36d8dbb5b' )
