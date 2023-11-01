@@ -30,8 +30,9 @@ handler = WebhookHandler(os.environ.get('line_secret'))
 db_using=db
 
 filling_quantity={}
+udQuantity={}
 recorded_userInfo=[]
-TEMP_IMAGE_DIRECTORY="./Ocr_temp/"
+chatMode={}
 
 keyWordList=['是','否','確認紀錄','確認修改','搜尋中，請稍待...','使用關鍵字查詢','目前正在操作頁面','目前正在問答頁面','觀看特定日期紀錄','觀看今天紀錄',"添加到我的紀錄","紀錄 1 份","紀錄 2 份","紀錄 3 份","紀錄 0.5 份"]
 #LIFF靜態頁面
