@@ -28,7 +28,7 @@ def OCR(image_data,img_id):
         success, image_data = cv2.imencode('.jpg', cropped_image)
         if success:
             image_content = image_data.tobytes()
-            upload_image_to_github(image_content, img_id)
+            # upload_image_to_github(image_content, img_id)
 
         # 使用 Google Cloud Vision API 提取文本
         credentials_path = '/etc/secrets/google_application_credentials'   # Json憑證的路徑>>上render需設置secret file, 不從本機獲取
