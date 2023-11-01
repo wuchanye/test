@@ -1,6 +1,7 @@
 import openai
 import json
 from googlesearch import search
+import os
 
 import DB_Control as db
 
