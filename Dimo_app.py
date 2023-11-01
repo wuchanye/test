@@ -85,7 +85,6 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_id = event.source.user_id
-    chatMode[user_id]={'mode':'systemUse','data':None}
     mtext = event.message.text
     if mtext[:12]=='###我的基本資料###':
         record_userInfo(event,mtext,user_id)
@@ -100,6 +99,8 @@ def handle_message(event):
             record_foodInfo(event, mtext, user_id)
         elif mtext in keyWordList :
             None
+	elif user_id not in chatMode:
+            Dimo_search.searching(event, mtext, user_id)
         elif  user_id in chatMode:
             if chatMode[user_id].get('mode')=='systemUse':
                 Dimo_search.searching(event, mtext, user_id)
