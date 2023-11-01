@@ -27,7 +27,8 @@ def get_next_credential():
     return credential
 
 def create_connection():
-    return psycopg2.connect(database="DIMO", user="harry", password="910615", host="127.0.0.1", port="5432")
+    # return psycopg2.connect(database="DIMO", user="harry", password="910615", host="127.0.0.1", port="5432")
+    return psycopg2.connect('postgres://admin:BznJyfEj2hqpgJiEAevofcuB8BIjksOz@dpg-ckj67nglk5ic73cjgebg-a.singapore-postgres.render.com/dimo_test')
 
 @contextmanager
 def db_connection():
@@ -210,10 +211,36 @@ def record_userInfo2Table(user_id,user_info):
     return True
 
 if __name__=='__main__':
-    result=queryfromDB('today','Ub5136c58845e8760da3979c36d8dbb5b' )
-    print(len(result))
-    print(result)
-    print(result[1][3])
+    # result=queryfromDB('today','Ub5136c58845e8760da3979c36d8dbb5b' )
+    # print(len(result))
+    # print(result)
+    # print(result[1][3])
+    # try:
+        now = datetime.now()
+        current_time=str(now.month)+str(now.day)
+        table_name='dimorecord'+current_time
+        
+        create_table_query = f"""
+            CREATE TABLE IF NOT EXISTS user_info(
+                id SERIAL PRIMARY KEY,
+                user_id VARCHAR(255),
+                gender VARCHAR(10),
+                height double precision,
+                weight double precision,
+                exercise_intensity VARCHAR(20),
+                fitness_goal VARCHAR(20)
+            );
+        """
+        
+        with db_connection() as conn:
+            cur=conn.cursor()
+            cur.execute(create_table_query)
+            conn.commit()
+            cur.close()
+        # print('success')
+    # except:
+    #     print('error')
+
     #     None
     # queryfromDB('today', 'AM', 'Ub5136c58845e8760da3979c36d8dbb5b')
 #     r=get_items('蘋果')
