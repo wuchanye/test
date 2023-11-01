@@ -105,7 +105,7 @@ def handle_message(event):
             if chatMode[user_id].get('mode')=='systemUse':
                 Dimo_search.searching(event, mtext, user_id)
             elif chatMode[user_id].get('mode')=='chat':
-		print('in chat_mode')
+                print('in chatmode')
                 loading2GPT(event,mtext,user_id)
                 
         else:
