@@ -162,7 +162,10 @@ def queryfromDB(date,uid):
         else:
             monthAndDay=date[5:]
             month,day=monthAndDay.split("-")
-            
+
+            if(day[:1]=='0'):
+                day=day.replace('0','')
+                
             table_name='dimorecord'+month+day
             print(table_name)
             sql=f"""select * from {table_name} 
