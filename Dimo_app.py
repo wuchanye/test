@@ -36,7 +36,7 @@ TEMP_IMAGE_DIRECTORY="./Ocr_temp/"
 keyWordList=['是','否','確認紀錄','搜尋中，請稍待...','使用關鍵字查詢','目前正在操作頁面','目前正在問答頁面','觀看特定日期紀錄','觀看今天紀錄',"添加到我的紀錄","紀錄 1 份","紀錄 2 份","紀錄 3 份","紀錄 0.5 份"]
 
 #LIFF靜態頁面
-liffid_user = '1660781400-eP6OaxBn'
+liffid_user = '2001387487-wzdX92VR'
 liffid_food = '1660781400-Pl4O8NRE'
 
 @app.route('/userInfo')
