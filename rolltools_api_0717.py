@@ -126,11 +126,10 @@ def query(appid,secret,food_id,unit,picON):
     print("名稱：",name,"\n熱量：",calory,calory_unit,"\n蛋白質：",protein,protein_unit,"\n脂質：",fat,fat_unit,"\n碳水化合物：",carbohydrate,carbohydrate_unit)
     # print('IMAGE_PATH='+str(img))
     github_token = os.getenv('github_token')
-    image_url=upload_image_to_github(image_content, name, github_token)
-    print(image_url)
     data={'name':name,'calory':calory,'protein':protein,'fat':fat,'carb':carbohydrate}
     dataAndunit={'name':name,'calory':calory+' '+ calory_unit,'protein':protein+' '+protein_unit,'fat':fat+' '+fat_unit,'carb':carbohydrate+' '+carbohydrate_unit}
     if unit==True and picON==True:
+        image_url=upload_image_to_github(image_content, name, github_token)
         return dataAndunit,image_url
     elif unit==True and picON==False:
         return dataAndunit
