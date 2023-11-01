@@ -4,7 +4,7 @@ from googlesearch import search
 
 import DB_Control as db
 
-openai.api_key = "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"
+openai.api_key = os.getenv('openai_key')
 
 backtrace = 2   # 記錄幾組對話
 def google_res(user_msg, num_results=5, verbose=False):
