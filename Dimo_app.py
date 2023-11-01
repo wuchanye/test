@@ -103,13 +103,13 @@ def handle_message(event):
         elif  user_id in chatMode:
             
             if chatMode[user_id].get('mode')=='systemUse':
+		print('搜尋'+mtext)
                 Dimo_search.searching(event, mtext, user_id)
             elif chatMode[user_id].get('mode')=='chat':
                 print('in chatmode')
                 loading2GPT(event,mtext,user_id)
                 
-        else:
-            
+        else: 
             message = TextSendMessage(
                         text = '預設操作模式\n直接輸入關鍵字可進行查詢，\n或點擊選單切換模式或使用功能。',
                         quick_reply=(QuickReply(
@@ -128,7 +128,6 @@ def handle_message(event):
                 )
              )
             line_bot_api.reply_message(event.reply_token,message)
-TEMP_IMAGE_DIRECTORY = "./Ocr_temp/"
 
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image_message(event):
