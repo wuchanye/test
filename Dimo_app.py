@@ -33,11 +33,13 @@ filling_quantity={}
 recorded_userInfo=[]
 TEMP_IMAGE_DIRECTORY="./Ocr_temp/"
 
-keyWordList=['是','否','確認紀錄','搜尋中，請稍待...','使用關鍵字查詢','目前正在操作頁面','目前正在問答頁面','觀看特定日期紀錄','觀看今天紀錄',"添加到我的紀錄","紀錄 1 份","紀錄 2 份","紀錄 3 份","紀錄 0.5 份"]
-
+keyWordList=['是','否','確認紀錄','確認修改','搜尋中，請稍待...','使用關鍵字查詢','目前正在操作頁面','目前正在問答頁面','觀看特定日期紀錄','觀看今天紀錄',"添加到我的紀錄","紀錄 1 份","紀錄 2 份","紀錄 3 份","紀錄 0.5 份"]
 #LIFF靜態頁面
 liffid_user = os.environ.get('liffid_user')
-liffid_food = '1660781400-Pl4O8NRE'
+liffid_food = os.environ.get('liffid_food')
+liffid_viewUserInfo= os.environ.get('liffid_viewUserInfo')
+user_defalt_info={}
+hist=[]
 
 @app.route('/userInfo')
 def userInfo():
@@ -47,6 +49,28 @@ def userInfo():
 def foodInfo():
 	return render_template('foodInfo2.html', liffid = liffid_food)
 
+@app.route('/getUserId')
+def getUserId():
+   return render_template('getUserID.html', liffid=liffid_viewUserInfo)
+
+@app.route('/viewUserInfo', methods=['GET','POST'])
+def viewUserInfo():
+    if request.method == 'POST':
+        user_id = request.values['userID']
+        print(user_id)
+        global user_defalt_info
+        defaltInfo = db_using.view_user_info(user_id)
+
+        user_defalt_info = {}
+        user_defalt_info['gender'] = defaltInfo[2]
+        user_defalt_info['height'] = defaltInfo[3]
+        user_defalt_info['weight'] = defaltInfo[4]
+        user_defalt_info['exerciseIntensity'] = defaltInfo[5]
+        user_defalt_info['fitnessGoal'] = defaltInfo[6]
+        print(user_defalt_info)
+        return render_template('viewUserInfo.html', liffid = liffid_viewUserInfo,user_info=user_defalt_info)
+    else:
+        return render_template('viewUserInfo.html', liffid = liffid_viewUserInfo,user_info=user_defalt_info)
 @app.route("/callback", methods=['POST'])
 def callback():
      signature = request.headers['X-Line-Signature']
@@ -60,21 +84,48 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_id = event.source.user_id
+    chatMode[user_id]={'mode':'systemUse','data':None}
     mtext = event.message.text
     if mtext[:12]=='###我的基本資料###':
         record_userInfo(event,mtext,user_id)
     elif (db_using.check_user_in_userInfo(user_id)==False):
         recording_userInfo(event,user_id)      
     elif(db_using.check_user_in_userInfo(user_id)):
-        if user_id in filling_quantity:
+        if user_id in filling_quantity :
             recordWithCQ(event,mtext,user_id)
+        elif  user_id in udQuantity:
+            updateWithCQ(event,mtext,user_id)
         elif mtext[:12]=='###食品營養資訊###':
             record_foodInfo(event, mtext, user_id)
         elif mtext in keyWordList :
             None
-        else:
-            Dimo_search.searching(event, mtext, user_id)
+        elif  user_id in chatMode:
             
+            if chatMode[user_id].get('mode')=='systemUse':
+                Dimo_search.searching(event, mtext, user_id)
+            elif chatMode[user_id].get('mode')=='chat':
+                loading2GPT(event,mtext,user_id)
+                
+        else:
+            
+            message = TextSendMessage(
+                        text = '預設操作模式\n直接輸入關鍵字可進行查詢，\n或點擊選單切換模式或使用功能。',
+                        quick_reply=(QuickReply(
+                        items=[
+                            {
+                              "type": "action",
+                              "action": {
+                                "type": "postback",
+                                "label": "開啟圖文選單",
+                                "data":'None',
+                                'inputOption':'openRichMenu'
+                              }
+                            }
+                    ]
+                    )
+                )
+             )
+            line_bot_api.reply_message(event.reply_token,message)
 TEMP_IMAGE_DIRECTORY = "./Ocr_temp/"
 
 @handler.add(MessageEvent, message=ImageMessage)
@@ -100,16 +151,50 @@ def handle_image_message(event):
 def handle_postback(event):
     user_id = event.source.user_id
     postback_data = request.json['events'][0]['postback']['data']
-    
-    if postback_data=="choosed_date":
+    if postback_data=='None':
+        None
+    elif postback_data=="choosed_date":
         selected_date = event.postback.params['date']
         view_specific_day_record(event,selected_date,user_id)
+    elif postback_data=='change-to-systemMode' :
+        chatMode[user_id]={'mode':'systemUse','data':None}
+        message = TextSendMessage(
+                    text = '已切換至操作模式'
+            )
+        line_bot_api.reply_message(event.reply_token,message)
+    elif postback_data=='systemMode':
+        chatMode[user_id]={'mode':'systemUse','data':None}
+        # message = TextSendMessage(
+        #             text = '現在是操作模式，mode='+chatMode[user_id].get('mode')
+        #     )
+        # line_bot_api.reply_message(event.reply_token,message)
+    elif postback_data=='change-to-chatMode' :
+        chatMode[user_id]={'mode':'chat','data':hist}
+        message = TextSendMessage(
+                    text = '已切換至智能問答模式'
+            )
+        line_bot_api.reply_message(event.reply_token,message)
+    elif postback_data=='chatMode':
+        chatMode[user_id]={'mode':'chat','data':hist}
+        # message = TextSendMessage(
+        #             text = '現在是智能問答模式，mode='+chatMode[user_id].get('mode')
+        #     )
+        # line_bot_api.reply_message(event.reply_token,message)
+        
     else:   
         action,value=postback_data.split('^')
         if (db_using.check_user_in_userInfo(user_id)==False):
             recording_userInfo(event,user_id) 
         elif action=='CancleRecord':
-            filling_quantity.pop(value)
+            if user_id in filling_quantity:
+                filling_quantity.pop(value)
+            message = TextSendMessage(
+                        text = '已取消'
+                )
+            line_bot_api.reply_message(event.reply_token,message)
+        elif action=='CancleUpdate':
+            if user_id in udQuantity:
+                udQuantity.pop(value)
             message = TextSendMessage(
                         text = '已取消'
                 )
@@ -120,10 +205,25 @@ def handle_postback(event):
             Dimo_search.queryTheDetail(event,value, user_id)
             # backdata = dict(parse_qsl(event.postback.data)) #取得 Postback 資料
             # if  backdata.get('action') == 'choose':
-            #     sendBack_choose(event, backdata        
+            #     sendBack_choose(event, backdata     
+        elif action=='Update':
+            id,name,quantity,date=value.split(':')
+            success=db_using.updateQuantity(quantity, id, user_id, name, date)
+            if success:
+                message = TextSendMessage(
+                            text = '修改成功'
+                    )
+                line_bot_api.reply_message(event.reply_token,message)
+                if user_id in udQuantity:
+                    udQuantity.pop(user_id)
         elif action== 'ReRecrod':
             message = TextSendMessage(
                         text = '請輸入要記錄的份量數:'
+                )
+            line_bot_api.reply_message(event.reply_token,message)
+        elif  action=='ReUpdate':
+            message = TextSendMessage(
+                        text = '請重新輸入要修改的份量數:'
                 )
             line_bot_api.reply_message(event.reply_token,message)
         elif action=='recordWithQuantity':
@@ -138,6 +238,8 @@ def handle_postback(event):
                 Rmenu.RecordFunction(event,user_id,line_bot_api)
             elif value=='txtSearch':
                 alert(event,user_id)
+            elif value=='selfInfo':
+                viewOrUpdateUserInfo(event,user_id)
         elif action=='viewRecord':
             if value=='today':
                 view_today_record(event,user_id)
@@ -148,13 +250,29 @@ def handle_postback(event):
             print(record_id,food_name,date)
             confirm_dlRecord(event,user_id,record_id,food_name,date)
         elif action == 'udRecord':
-            None
+            record_id,food_name,date=value.split(':')
+            updateQuantity(event, user_id, food_name, record_id, date)
+            
         elif action == 'confirm':
             if value[:2]=="dl":
                 temp=value[3:]
                 print(temp)
                 delete_data_call(event,temp,user_id)
-     
+  
+def loading2GPT(event,prompt,user_id):
+    reply=chat.UsingChat(user_id, chatMode[user_id].get('data'),prompt)
+    message = TextSendMessage(
+                text = reply
+        )
+    line_bot_api.reply_message(event.reply_token,message)
+    
+
+def reply2User(event,reply,user_id):
+    message = TextSendMessage(
+                text = "請稍待訊息回覆!"
+        )
+    line_bot_api.reply_message(event.reply_token,message)
+      
 def recording_userInfo(event,user_id):
     message = TemplateSendMessage(
             alt_text="填寫個人資料",
@@ -165,6 +283,25 @@ def recording_userInfo(event,user_id):
                     URIAction(
                         label="填寫個人資料",
                         uri="https://liff.line.me/"+liffid_user
+                    )
+                ]
+            )
+        )
+    recorded_userInfo.append(user_id)
+    line_bot_api.reply_message(event.reply_token, message)
+
+
+def viewOrUpdateUserInfo(event,user_id): 
+    
+    message = TemplateSendMessage(
+            alt_text="觀看個人資料",
+            template=ButtonsTemplate(
+                title="查看個人資料",
+                text="點擊下面的按鈕開啟表單\n可察看個人資料，或進行修改",
+                actions=[
+                    URIAction(
+                        label="個人資料",
+                        uri="https://liff.line.me/"+liffid_viewUserInfo
                     )
                 ]
             )
@@ -218,7 +355,7 @@ def record_userInfo(event,mtext,user_id):
                     text = '發生錯誤'
             )
         line_bot_api.reply_message(event.reply_token,message)
-        
+
 def alert(event,user_id):
     try:
         message = TextSendMessage(
@@ -230,7 +367,7 @@ def alert(event,user_id):
 
 def view_today_record(event,user_id):
     result=db.queryfromDB("today", user_id)
-    if (len(result)==0):
+    if (len(result)==0 or result=='noTable'):
         message = TextSendMessage(
                     text = "您今天尚未創建任何紀錄!"
             )
@@ -238,11 +375,15 @@ def view_today_record(event,user_id):
     else:
         # 創建最終的 JSON 物件
         flex_content=record.bubble_creat(len(result),result)
-        message=FlexSendMessage(
+        message=[
+                TextSendMessage(
+                        text = '今日紀錄'
+                ),
+            FlexSendMessage(
                 alt_text='紀錄',
                 contents=flex_content
         )
-        
+        ]
         line_bot_api.reply_message(event.reply_token, message)
 
 def view_specific_day_record(event,date,user_id):
@@ -250,24 +391,36 @@ def view_specific_day_record(event,date,user_id):
     result=db.queryfromDB(date, user_id)
     if (len(result)==0):
         message = TextSendMessage(
-                    text = "未取得任何紀錄!"
+                    text = f"{date}\n未取得任何紀錄!"
             )
         line_bot_api.reply_message(event.reply_token,message)
     elif result == 'noTable':
         message = TextSendMessage(
-                    text = "未建立任何紀錄!"
+                    text = f"{date}\n未建立任何紀錄!"
             )
         line_bot_api.reply_message(event.reply_token,message)
     else:
         # 創建最終的 JSON 物件
         flex_content=record.bubble_creat(len(result),result)
-        message=FlexSendMessage(
-                alt_text='紀錄',
-                contents=flex_content
-        )
-        
+        message=[
+            TextSendMessage(
+                        text = f'{date} 紀錄'
+                ),
+            FlexSendMessage(
+                    alt_text='紀錄',
+                    contents=flex_content
+            )
+        ]
         line_bot_api.reply_message(event.reply_token, message)
 
+def updateQuantity(event,user_id,food_name,record_id,date):
+    message = TextSendMessage(
+                text = f"修改 {food_name} 份量\n請直接輸入要修改的份量數:"
+        )
+    udQuantity[user_id]={'id':record_id,'name':food_name,'date':date}
+    
+    line_bot_api.reply_message(event.reply_token,message)
+    
 def confirm_dlRecord(event,user_id,record_id,food_name,date):
     print(record_id)
     print(food_name)
@@ -297,9 +450,14 @@ def delete_data_call(event,value,user_id):
     itemId,foodName,date=value.split(':')
     print("Delete:"+foodName)
     success=db_using.deleteData(user_id, itemId, foodName, date)
-    if success:
+    if success==True:
         message = TextSendMessage(
                     text = "刪除記錄成功"
+            )
+        line_bot_api.reply_message(event.reply_token,message)
+    elif success=='此筆資料已不存在，無法進行刪除操作':
+        message = TextSendMessage(
+                    text = '此筆資料已不存在\n無法進行刪除操作\n請先確認紀錄後再執行此操作!'
             )
         line_bot_api.reply_message(event.reply_token,message)
     else:
@@ -379,7 +537,7 @@ def askingQuantity(event,keyword,user_id):
                    action=PostbackAction(label="3份", data=f"recordWithQuantity^{keyword}:3",text='紀錄 3 份')
                                ),
                    QuickReplyButton(
-                   action=PostbackAction(label="自訂份量", data=f"recordWithQuantity^{keyword}:other")
+                   action=PostbackAction(label="自訂份量", data=f"recordWithQuantity^{keyword}:other",inputOption='openKeyboard')
                                ),
                    QuickReplyButton(
                    action=PostbackAction(label="取消輸入",data=f'CancleRecord^{user_id}')
@@ -414,18 +572,23 @@ def recordON(event,foodID, quantity,user_id):
             message = TextSendMessage(
                         text = '記錄新增成功'
                 )
-            if filling_quantity[user_id]:    
+            if user_id in filling_quantity:    
                 filling_quantity.pop(user_id)
             line_bot_api.reply_message(event.reply_token,message)
-        
+def isFloat(num):
+    try:
+        float(num)
+        return True
+    except:
+        return False
 def recordWithCQ(event,keyword,user_id):
     food_id=filling_quantity[user_id].get('foodid')
     if(keyword in ["添加到我的紀錄","紀錄 1 份","紀錄 2 份","紀錄 3 份","紀錄 0.5 份"]):
         None
     elif(keyword=='確認紀錄'):
-        
-        filling_quantity.pop(user_id)
-    elif (keyword.isdigit()==False):
+        if user_id in filling_quantity:
+            filling_quantity.pop(user_id)
+    elif (isFloat(keyword)==False or keyword.isnumeric()):
         message = TextSendMessage(
                     text = '請輸入數字',
                     quick_reply=(QuickReply(
@@ -439,11 +602,11 @@ def recordWithCQ(event,keyword,user_id):
                     
             )
         line_bot_api.reply_message(event.reply_token,message)
-    elif keyword.isnumeric() or (keyword.count('.') == 1 and keyword.replace('.', '').isnumeric()):
+    elif keyword.isdigit() or (keyword.count('.') == 1 and keyword.replace('.', '').isnumeric()):
         value = float(keyword)
         if value <= 0:
             message = TextSendMessage(
-                        text = '請輸入正數',
+                        text = '請輸入大於0的正數',
                         quick_reply=(QuickReply(
                         items=[
                             QuickReplyButton(
@@ -491,6 +654,78 @@ def recordWithCQ(event,keyword,user_id):
             line_bot_api.reply_message(event.reply_token,message)
         return True, value
     return False, None
+
+def updateWithCQ(event,quantity,user_id):
+    id=udQuantity[user_id].get('id')
+    name=udQuantity[user_id].get('name')
+    date=udQuantity[user_id].get('date')
+    if(quantity=='確認修改'):
+        if user_id in udQuantity:
+            udQuantity.pop(user_id)
+    elif (isFloat(quantity)==False or quantity.isnumeric()):
+        message = TextSendMessage(
+                    text = '請輸入數字',
+                    quick_reply=(QuickReply(
+                    items=[
+                        QuickReplyButton(
+                        action=PostbackAction(label="取消輸入",data=f'CancleRecord^{user_id}')
+                                    )
+                        ]
+                    )
+                )
+                    
+            )
+        line_bot_api.reply_message(event.reply_token,message)
+    elif quantity.isdigit() or (quantity.count('.') == 1 and quantity.replace('.', '').isnumeric()):
+        value = float(quantity)
+        if value <= 0:
+            message = TextSendMessage(
+                        text = '請輸入大於0的正數',
+                        quick_reply=(QuickReply(
+                        items=[
+                            QuickReplyButton(
+                            action=PostbackAction(label="取消輸入",data=f'CancleRecord^{user_id}')
+                                        )
+                            ]
+                        )
+                    )
+                )
+            line_bot_api.reply_message(event.reply_token,message)
+        elif value >= 20:
+            message = TextSendMessage(
+                        text = '您輸入的數似乎過大，請確認是否重新輸入',
+                        quick_reply=(QuickReply(
+                        items=[
+                            QuickReplyButton(
+                            action=PostbackAction(label="是",data='ReUpdate^{quantity}')
+                                        ),
+                            QuickReplyButton(
+                            action=PostbackAction(label="否",data=f"Update^{user_id}:{id}:{name}:{quantity}:{date}",text='確認修改')
+                                        )
+                            ]
+                        )
+                )
+            )
+        else:
+            message = TextSendMessage(
+                        text = f'紀錄 {value} 份?',
+                        quick_reply=(QuickReply(
+                        items=[
+                            QuickReplyButton(
+                            action=PostbackAction(label="確認",data=f'Update^{id}:{name}:{quantity}:{date}',text='確認修改')
+                                        ),
+                            QuickReplyButton(
+                            action=PostbackAction(label="重新輸入",data='ReUpdate^{quantity}')
+                                        ),
+                            QuickReplyButton(
+                            action=PostbackAction(label="取消",data=f"CancleUpdate^{user_id}")
+                                        )
+                            ]
+                        )
+                    )
+                )
+            
+        line_bot_api.reply_message(event.reply_token,message)
 
 if __name__ == '__main__':
     app.run()
