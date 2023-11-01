@@ -11,3 +11,5 @@ pandas
 google-cloud-vision
 opencv-python
 opencc-python-reimplemented
+googlesearch-python
+openai
