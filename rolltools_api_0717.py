@@ -113,7 +113,7 @@ def query(appid,secret,food_id,unit,picON):
     # 擷取其中一筆資料的部分內容, 列印食物詳細資訊
     #name = data["data"]["name"]
     name = s2t.convert(data["data"]["name"])
-    img_content=download_images_with_beautifulsoup(1, name)
+    image_content=download_images_with_beautifulsoup(1, name)
     time.sleep(1) #訪問間隔
     calory = data["data"]["calory"]
     calory_unit = data["data"]["caloryUnit"]
