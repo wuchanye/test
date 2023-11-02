@@ -879,20 +879,21 @@ def recordWithCQ(event,keyword,user_id):
     elif(keyword=='確認紀錄'):
         if user_id in filling_quantity:
             filling_quantity.pop(user_id)
-    elif (isFloat(keyword)==False or keyword.isnumeric()==False):
-        message = TextSendMessage(
-                    text = '請輸入數字',
-                    quick_reply=(QuickReply(
-                    items=[
-                        QuickReplyButton(
-                        action=PostbackAction(label="取消輸入",data=f'CancleRecord^{user_id}')
-                                    )
-                        ]
+    elif (isFloat(keyword)==False):
+        if(keyword.isnumeric==False):
+            message = TextSendMessage(
+                        text = '請輸入數字',
+                        quick_reply=(QuickReply(
+                        items=[
+                            QuickReplyButton(
+                            action=PostbackAction(label="取消輸入",data=f'CancleRecord^{user_id}')
+                                        )
+                            ]
+                        )
                     )
+
                 )
-                    
-            )
-        line_bot_api.reply_message(event.reply_token,message)
+            line_bot_api.reply_message(event.reply_token,message)
     elif keyword.isdigit() or (keyword.count('.') == 1 and keyword.replace('.', '').isnumeric()):
         value = float(keyword)
         if value <= 0:
@@ -953,20 +954,21 @@ def updateWithCQ(event,quantity,user_id):
     if(quantity=='確認修改'):
         if user_id in udQuantity:
             udQuantity.pop(user_id)
-    elif (isFloat(quantity)==False or quantity.isnumeric()==False):
-        message = TextSendMessage(
-                    text = '請輸入數字',
-                    quick_reply=(QuickReply(
-                    items=[
-                        QuickReplyButton(
-                        action=PostbackAction(label="取消輸入",data=f'CancleRecord^{user_id}')
-                                    )
-                        ]
+    elif (isFloat(quantity)==False):
+        if(quantity.isnumeric==False):
+            message = TextSendMessage(
+                        text = '請輸入數字',
+                        quick_reply=(QuickReply(
+                        items=[
+                            QuickReplyButton(
+                            action=PostbackAction(label="取消輸入",data=f'CancleRecord^{user_id}')
+                                        )
+                            ]
+                        )
                     )
+
                 )
-                    
-            )
-        line_bot_api.reply_message(event.reply_token,message)
+            line_bot_api.reply_message(event.reply_token,message)
     elif quantity.isdigit() or (quantity.count('.') == 1 and quantity.replace('.', '').isnumeric()):
         value = float(quantity)
         if value <= 0:
