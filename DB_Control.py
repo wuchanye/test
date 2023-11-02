@@ -157,6 +157,10 @@ def updateQuantity(quantity,recordId,uid,foodName,date):
     monthAndDay=date[5:]
     month,day=monthAndDay.split("-")
     
+    if day[:1]=='0':
+        day=day.replace('0',"")
+        print(day)
+        
     table_name='dimorecord'+month+day
     
     with db_connection() as conn:
@@ -227,6 +231,9 @@ def deleteData(user_id, itemId, foodName, date):
     try:
         monthAndDay = date[5:]
         month, day = monthAndDay.split("-")
+        if day[:1]=='0':
+            day=day.replace('0',"")
+            print(day)
         
         table_name = 'dimorecord' + month + day
         # 先確認資料是否存在
