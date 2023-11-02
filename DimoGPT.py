@@ -5,7 +5,7 @@ import os
 
 import DB_Control as db
 
-openai.api_key = "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"
+openai.api_key = os.getenv('openai_key')
 
 backtrace = 2   # 記錄幾組對話
 def google_res(user_msg, num_results=5, verbose=False):
