@@ -470,23 +470,23 @@ def showImgResult(event,user_id,result):
                             },
                             {
                               "type": "text",
-                              "text":"包裝份量 : " +result.get('包裝份量')
+                              "text":"包裝份量 : " +result.get('包裝份量') 
                             },
                           {
                             "type": "text",
-                            "text":"熱量 : " +result.get('熱量')
+                            "text":"熱量 : " +result.get('熱量') +"大卡"
                           },
                            {
                              "type": "text",
-                             "text":"蛋白質　: " + result.get('蛋白質')
+                             "text":"蛋白質 : " + result.get('蛋白質') +"公克"
                            },
                            {
                              "type": "text",
-                             "text": "脂肪 : " +result.get('脂肪')
+                             "text": "脂肪 : " +result.get('脂肪') +"公克"
                            },
                            {
                              "type": "text",
-                             "text":"碳水化合物 : " + result.get('碳水化合物')
+                             "text":"碳水化合物 : " + result.get('碳水化合物') +"公克"
                            }
                         ],
                         "spacing": "md",
