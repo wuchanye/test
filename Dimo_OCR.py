@@ -27,18 +27,20 @@ def OCR(image_data,img_id):
         # 将图像转换为二进制数据
         success, image_data = cv2.imencode('.jpg', cropped_image)
         if success:
-            image_content = image_data.tobytes()
-            # upload_image_to_github(image_content, img_id)
+            try:
+                image_content = image_data.tobytes()
+                # upload_image_to_github(image_content, img_id)
 
-        # 使用 Google Cloud Vision API 提取文本
-        credentials_path = '/etc/secrets/google_application_credentials'   # Json憑證的路徑>>上render需設置secret file, 不從本機獲取
-        extracted_text = extract_text_from_image(image_content, credentials_path)
-
-        # 將提取的文本整理成字典
-        extracted_text_dict = {'text': extracted_text}
-        print(extracted_text_dict)
+                # 使用 Google Cloud Vision API 提取文本
+                credentials_path = '/etc/secrets/google_application_credentials'   # Json憑證的路徑>>上render需設置secret file, 不從本機獲取
+                extracted_text = extract_text_from_image(image_content, credentials_path)
+                ocr_result=trans2dict(extracted_text[0])
+                return ocr_result
+            except IndexError:
+                return 'no boxes'
     else:
         print('未找到主要方框，無法識別文字。')
+        return 'no boxes'
 
 def resize_image(image, new_size):
     return cv2.resize(image, new_size)
@@ -130,3 +132,50 @@ def upload_image_to_github(image_content, img_id):
     else:
         print(f"上传文件失败，HTTP响应代码: {response.status_code}")
         print(f"响应内容: {response.text}")
+
+def trans2dict(exText):
+    try:
+        text=exText
+        print(text)
+        food_info={}
+    
+        list_text=text.split('\n')
+        
+        index_1 = next((i for i, item in enumerate(list_text) if item.startswith("每一份量") ), None)
+        index_2 = next((i for i, item in enumerate(list_text) if item.startswith("本包裝含") and item.endswith("份")), None)
+    
+        if index_1 is not None and index_2 is not None :
+            per_serving = re.search(r'(\d+)[\s]*(\w+)', list_text[index_1]).group()
+            package_serving = re.search(r'(\d+)', list_text[index_2]).group()
+            # print(f"每一份量的數值: {per_serving} 公克")
+            # print(f"本包裝含的份量數: {package_serving} 份")
+            food_info['每一份量']=per_serving
+            food_info['包裝份量'] = package_serving
+            if index_1< index_2:
+                list_text.pop(index_2)
+                list_text.pop(index_1-1)
+            else:
+                list_text.pop(index_1)
+                list_text.pop(index_2-1)
+        else:
+            print("格式不正確")
+            return 'non support'
+            
+        index_per_serving = list_text.index('每份')
+    
+        sublist_per_serving = list_text[index_per_serving:index_per_serving + 9]
+    
+        calories_value = re.search(r'\d+', sublist_per_serving[0+1]).group()
+        protein_value = re.search(r'\d+(\.\d+)?', sublist_per_serving[1+1]).group()
+        fat_value = re.search(r'\d+(\.\d+)?', sublist_per_serving[2+1]).group()
+        carb_value = re.search(r'\d+(\.\d+)?', sublist_per_serving[5+1]).group()
+    
+        food_info['熱量']=calories_value
+        food_info['蛋白質']=protein_value
+        food_info['脂肪']=fat_value
+        food_info['碳水化合物']=carb_value
+    
+        print(food_info)
+        return food_info
+    except ValueError:
+        return 'non support'
