@@ -128,20 +128,43 @@ def record2dbWithCData(uid,foodinfo):
             print('CreateTableFaild')
             return False
         cur.close()
-        
-def updateQuantity(quantity,foodID,uid):
-    
+
+def recordImgData2DB(uid,quantity,name,data_list):
     now = datetime.now()
-    time=now.time()
     current_time=str(now.month)+str(now.day)
     table_name='dimorecord'+current_time
+    
+    with db_connection() as conn:
+        cur=conn.cursor()
+        date = now.date()
+        time = now.time()
+        sql = f"""INSERT INTO {table_name} (user_id, date, time, food_name, calories, protein, fat, carbohydrates,quantity)
+        values('{uid}','{date}','{time}','{name}','{data_list.get('熱量')}','{data_list.get('蛋白質')}','{data_list.get('脂肪')}','{data_list.get('碳水化合物')}','{quantity}') """
+        
+        commition=create_table(conn, table_name)
+        if commition:
+            cur.execute(sql)
+            conn.commit()
+            print(f'RecordSuccessful/nTable:{table_name}')
+            return True
+        else:
+            print('RecordFaild')
+            return False
+        cur.close()
+
+def updateQuantity(quantity,recordId,uid,foodName,date):
+    
+    monthAndDay=date[5:]
+    month,day=monthAndDay.split("-")
+    
+    table_name='dimorecord'+month+day
     
     with db_connection() as conn:
         cur=conn.cursor()
         
         sql =f"""UPDATE {table_name}
                 SET quantity = {quantity}
-                WHERE food_id = '{foodID}' and user_id='{uid}' and time='{time}';"""
+                WHERE id = '{recordId}' and user_id='{uid}' and food_name='{foodName}';"""
         cur.execute(sql)
         conn.commit()
         cur.close()
@@ -162,10 +185,10 @@ def queryfromDB(date,uid):
         else:
             monthAndDay=date[5:]
             month,day=monthAndDay.split("-")
-
-            if(day[:1]=='0'):
-                day=day.replace('0','')
-                
+            
+            if day[:1]=='0':
+                day=day.replace('0',"")
+                print(day)
             table_name='dimorecord'+month+day
             print(table_name)
             sql=f"""select * from {table_name} 
@@ -225,6 +248,7 @@ def deleteData(user_id, itemId, foodName, date):
     except Exception as e:
         print('刪除資料時發生錯誤:', e)
         return False
+
     
 def record_userInfo2Table(user_id,user_info):
     sql=sql = f"""
@@ -264,37 +288,12 @@ def view_user_info(user_id):
     
     return result[0]
 
-if __name__=='__main__':
-    # result=queryfromDB('today','Ub5136c58845e8760da3979c36d8dbb5b' )
-    # print(len(result))
-    # print(result)
-    # print(result[1][3])
-    # try:
-        now = datetime.now()
-        current_time=str(now.month)+str(now.day)
-        table_name='dimorecord'+current_time
-        
-        create_table_query = f"""
-            CREATE TABLE IF NOT EXISTS user_info(
-                id SERIAL PRIMARY KEY,
-                user_id VARCHAR(255),
-                gender VARCHAR(10),
-                height double precision,
-                weight double precision,
-                exercise_intensity VARCHAR(20),
-                fitness_goal VARCHAR(20)
-            );
-        """
-        
-        with db_connection() as conn:
-            cur=conn.cursor()
-            cur.execute(create_table_query)
-            conn.commit()
-            cur.close()
-        # print('success')
-    # except:
-    #     print('error')
 
+if __name__=='__main__':
+    result=view_user_info('Ub5136c58845e8760da3979c36d8dbb5b')
+    print(len(result[0]))
+    print(result)
+    
     #     None
     # queryfromDB('today', 'AM', 'Ub5136c58845e8760da3979c36d8dbb5b')
 #     r=get_items('蘋果')
