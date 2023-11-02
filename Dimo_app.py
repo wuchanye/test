@@ -41,6 +41,7 @@ liffid_food = os.environ.get('liffid_food')
 liffid_viewUserInfo= os.environ.get('liffid_viewUserInfo')
 user_defalt_info={}
 hist=[]
+filling_imgInfo={}
 
 @app.route('/userInfo')
 def userInfo():
@@ -95,19 +96,22 @@ def handle_message(event):
             recordWithCQ(event,mtext,user_id)
         elif  user_id in udQuantity:
             updateWithCQ(event,mtext,user_id)
+        elif user_id in filling_imgInfo :
+            recordImgData(event,user_id,mtext)
         elif mtext[:12]=='###食品營養資訊###':
             record_foodInfo(event, mtext, user_id)
         elif mtext in keyWordList :
             None
         elif user_id not in chatMode:
             Dimo_search.searching(event, mtext, user_id)
-        elif  user_id in chatMode:
+        elif user_id in chatMode: 
             if chatMode[user_id].get('mode')=='systemUse':
                 Dimo_search.searching(event, mtext, user_id)
             elif chatMode[user_id].get('mode')=='chat':
                 loading2GPT(event,mtext,user_id)
                 
-        else: 
+        else:
+            
             message = TextSendMessage(
                         text = '預設操作模式\n直接輸入關鍵字可進行查詢，\n或點擊選單切換模式或使用功能。',
                         quick_reply=(QuickReply(
@@ -138,13 +142,33 @@ def handle_image_message(event):
     # 获取用户发送的图像消息
     message_content = line_bot_api.get_message_content(message_id)
     image_data = message_content.content
-    ocr.OCR(image_data,message_id)
-
+    result=ocr.OCR(image_data,message_id)
     
-    message = TextSendMessage(
-                text = "上傳圖片成功！\n請稍後辨識結果"
-        )
-    line_bot_api.reply_message(event.reply_token,message)
+    if result=='non support':
+        message = TextSendMessage(
+                    text = '很抱歉，此格式尚不支援辨識',
+                    quick_reply=(QuickReply(
+                    items=[
+                            {
+                              "type": "action",
+                              "action": {
+                                "type": "uri",
+                                "label": "手動輸入資訊",
+                                "uri": "https://liff.line.me/"+liffid_food
+                              }
+                            }
+                        ]
+                    )
+                )
+            )
+        line_bot_api.reply_message(event.reply_token,message)
+    elif result=='no boxes':
+        message = TextSendMessage(
+                    text = '未找到營養標籤\n請確認上傳圖片正確性\n或上傳更清晰之圖像'
+            )
+        line_bot_api.reply_message(event.reply_token,message)
+    else:
+        showImgResult(event, user_id, result)
             
 @handler.add(PostbackEvent) #PostbackTemplateAction 觸發此事件
 def handle_postback(event):
@@ -158,27 +182,27 @@ def handle_postback(event):
     elif postback_data=='change-to-systemMode' :
         chatMode[user_id]={'mode':'systemUse','data':None}
         message = TextSendMessage(
-                    text = '已切換至操作模式'+ chatMode[user_id].get('mode')
+                    text = '已切換至操作模式'
             )
         line_bot_api.reply_message(event.reply_token,message)
     elif postback_data=='systemMode':
         chatMode[user_id]={'mode':'systemUse','data':None}
-        message = TextSendMessage(
-                    text = '現在是操作模式，mode='+chatMode[user_id].get('mode')
-            )
-        line_bot_api.reply_message(event.reply_token,message)
+        # message = TextSendMessage(
+        #             text = '現在是操作模式，mode='+chatMode[user_id].get('mode')
+        #     )
+        # line_bot_api.reply_message(event.reply_token,message)
     elif postback_data=='change-to-chatMode' :
         chatMode[user_id]={'mode':'chat','data':hist}
         message = TextSendMessage(
-                    text = '已切換至智能問答模式'+ chatMode[user_id].get('mode')
+                    text = '已切換至智能問答模式'
             )
         line_bot_api.reply_message(event.reply_token,message)
     elif postback_data=='chatMode':
         chatMode[user_id]={'mode':'chat','data':hist}
-        message = TextSendMessage(
-                    text = '現在是智能問答模式，mode='+chatMode[user_id].get('mode')
-            )
-        line_bot_api.reply_message(event.reply_token,message)
+        # message = TextSendMessage(
+        #             text = '現在是智能問答模式，mode='+chatMode[user_id].get('mode')
+        #     )
+        # line_bot_api.reply_message(event.reply_token,message)
         
     else:   
         action,value=postback_data.split('^')
@@ -199,7 +223,8 @@ def handle_postback(event):
                 )
             line_bot_api.reply_message(event.reply_token,message)
         elif action=='addrecord':
-                askingQuantity(event,value,user_id)
+            food_id,name=value.split(':')
+            askingQuantity(event,food_id,name,user_id)
         elif action=='searchDetail':
             Dimo_search.queryTheDetail(event,value, user_id)
             # backdata = dict(parse_qsl(event.postback.data)) #取得 Postback 資料
@@ -251,13 +276,251 @@ def handle_postback(event):
         elif action == 'udRecord':
             record_id,food_name,date=value.split(':')
             updateQuantity(event, user_id, food_name, record_id, date)
-            
+        elif action =='record':
+            if value=='name':
+                None
+            elif value=='cancle':
+                if user_id in filling_imgInfo:
+                    filling_imgInfo.pop(user_id)
+            elif value=='reinput':
+                message = TextSendMessage(
+                            text = '請重新輸入要紀錄的份量數:'
+                    )
+                line_bot_api.reply_message(event.reply_token,message)
+            elif value[:7]=='comfirm':
+                act,value=value.split(':')
+                success=db_using.recordImgData2DB(user_id, value,filling_imgInfo[user_id].get('name'),filling_imgInfo[user_id].get('data'))
+                if success:
+                    message = TextSendMessage(
+                                text = "紀錄新增成功"
+                        )
+                    line_bot_api.reply_message(event.reply_token,message)
+                    filling_imgInfo.pop(user_id)
+                else:
+                    line_bot_api.reply_message(event.reply_token,'紀錄發生錯誤')
+            elif value[:7]=='imgData':
+                value,result=value.split(';')
+                filling_imgInfo[user_id]={'name':None,'data':eval(result)}
+                message = TextSendMessage(
+                            text = "請輸入食物名稱",
+                            quick_reply=(QuickReply(
+                            items=[
+                                {
+                                      "type": "action",
+                                      "action": {
+                                        "type": "postback",
+                                        "label": "開始輸入",
+                                        'data':"record^name",
+                                        'inputOption':'openKeyboard',
+                                        'fillInText':'名稱:'
+                                      }
+                                    },
+                                    {
+                                      "type": "action",
+                                      "action": {
+                                        "type": "postback",
+                                        "label": "取消",
+                                        'data':"record^cancle",
+                                        'text':'取消輸入',
+                                      }
+                                    }
+                                ]
+                            )
+                        )
+                    )
+                line_bot_api.reply_message(event.reply_token,message)
+            else:
+                _value,quantity=value.split(':')
+                if quantity=='other':
+                    message = TextSendMessage(
+                                text = '請輸入自訂份量數字:',
+                                quick_reply=(QuickReply(
+                                items=[
+                                    QuickReplyButton(
+                                    action=PostbackAction(label="取消輸入",data='record^cancle')
+                                                )
+                                    ]
+                                )
+                            )
+                        )
+                    line_bot_api.reply_message(event.reply_token,message)
+                else:
+                    success=db_using.recordImgData2DB(user_id, quantity,filling_imgInfo[user_id].get('name'),filling_imgInfo[user_id].get('data'))
+                    if success:
+                        message = TextSendMessage(
+                                    text = "紀錄新增成功"
+                            )
+                        line_bot_api.reply_message(event.reply_token,message)
+                        filling_imgInfo.pop(user_id)
+                    else:
+                        line_bot_api.reply_message(event.reply_token,'紀錄發生錯誤')
         elif action == 'confirm':
             if value[:2]=="dl":
                 temp=value[3:]
                 print(temp)
                 delete_data_call(event,temp,user_id)
-  
+
+def recordImgData(event,user_id,data):
+    if data[:3]=='名稱:':
+        name=data[3:]
+        if len(name)<=10:
+            filling_imgInfo[user_id]['name']=name
+            print(filling_imgInfo[user_id])
+            askingImgDataQuantity(event,data,user_id)
+    elif(data in ['確認紀錄',"添加到我的紀錄","紀錄 1 份","紀錄 2 份","紀錄 3 份","紀錄 0.5 份"]):
+        None
+    elif (isFloat(data)==False or data.isnumeric()==False):
+        message = TextSendMessage(
+                    text = '請輸入數字',
+                    quick_reply=(QuickReply(
+                    items=[
+                        QuickReplyButton(
+                        action=PostbackAction(label="取消輸入",data=f'CancleRecord^{user_id}')
+                                    )
+                        ]
+                    )
+                )
+                    
+            )
+        line_bot_api.reply_message(event.reply_token,message)
+    elif data.isdigit() or (data.count('.') == 1 and data.replace('.', '').isnumeric()):
+        value = float(data)
+        if value <= 0:
+            message = TextSendMessage(
+                        text = '請輸入大於0的正數',
+                        quick_reply=(QuickReply(
+                        items=[
+                            QuickReplyButton(
+                            action=PostbackAction(label="取消輸入",data='record^cancle')
+                                        )
+                            ]
+                        )
+                    )
+                )
+            line_bot_api.reply_message(event.reply_token,message)
+        elif value >= 20:
+            message = TextSendMessage(
+                        text = '您輸入的數似乎過大，請確認是否重新輸入',
+                        quick_reply=(QuickReply(
+                        items=[
+                            QuickReplyButton(
+                            action=PostbackAction(label="是",data='record^reinput')
+                                        ),
+                            QuickReplyButton(
+                            action=PostbackAction(label="否",data=f"record^comfirm:{value}",text='確認紀錄')
+                                        )
+                            ]
+                        )
+                )
+            )
+        else:
+            message = TextSendMessage(
+                        text = f'紀錄 {value} 份?',
+                        quick_reply=(QuickReply(
+                        items=[
+                            QuickReplyButton(
+                            action=PostbackAction(label="確認",data=f'record^comfirm:{value}',text='確認紀錄')
+                                        ),
+                            QuickReplyButton(
+                            action=PostbackAction(label="重新輸入",data='record^reinput')
+                                        ),
+                            QuickReplyButton(
+                            action=PostbackAction(label="取消",data="record^cancle")
+                                        )
+                            ]
+                        )
+                    )
+                )
+            
+        line_bot_api.reply_message(event.reply_token,message)
+
+    
+def showImgResult(event,user_id,result):
+    message = message=FlexSendMessage(
+                alt_text='圖像辨識結果',
+                contents={
+                  "type": "bubble",
+                  "size": "hecto",
+                  "header": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                      {
+                        "type": "text",
+                        "text": '辨識結果',
+                        "size": "xl",
+                        "margin": "sm"
+                      }
+                    ]
+                  },
+                  "hero": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                      {
+                        "type": "separator"
+                      },
+                      {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                              "type": "text",
+                              "text":"每一份量 : " +result.get('每一份量')
+                            },
+                            {
+                              "type": "text",
+                              "text":"包裝份量 : " +result.get('包裝份量')
+                            },
+                          {
+                            "type": "text",
+                            "text":"熱量 : " +result.get('熱量')
+                          },
+                           {
+                             "type": "text",
+                             "text":"蛋白質　: " + result.get('蛋白質')
+                           },
+                           {
+                             "type": "text",
+                             "text": "脂肪 : " +result.get('脂肪')
+                           },
+                           {
+                             "type": "text",
+                             "text":"碳水化合物 : " + result.get('碳水化合物')
+                           }
+                        ],
+                        "spacing": "md",
+                        "margin": "xxl",
+                        "position": "relative",
+                        "borderWidth": "semi-bold",
+                        "cornerRadius": "none",
+                        "paddingStart": "xxl"
+                      },
+                      {
+                        "type": "separator",
+                        "margin": "xxl"
+                      }
+                    ]
+                  },
+                  "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                      {
+                        "type": "button", 
+                        "action":{
+                        "type":"postback",
+                        "label": "加到我的紀錄",
+                        "data": "record^imgData;"+str(result),
+                        "text":"添加到我的紀錄"
+                        }
+                      }
+                    ]
+                  }
+                }
+            )
+    line_bot_api.reply_message(event.reply_token,message)
+    
 def loading2GPT(event,prompt,user_id):
     reply=chat.UsingChat(user_id, chatMode[user_id].get('data'),prompt)
     message = TextSendMessage(
@@ -518,25 +781,28 @@ def addQuantity(event,mtext, user_id):
             )
         line_bot_api.reply_message(event.reply_token,message)
         
-def askingQuantity(event,keyword,user_id):
+def askingQuantity(event,food_id,food_name,user_id):
+    filling_quantity[user_id]={
+        'foodid':food_id
+        }
     message = TextSendMessage(
-               text = '請選擇要記錄的份量數',
+               text = f'紀錄 {food_name}\n請選擇要記錄的份量數',
                quick_reply=(QuickReply(
                items=[
                    QuickReplyButton(
-                   action=PostbackAction(label="0.5份", data=f"recordWithQuantity^{keyword}:0.5",text='紀錄 0.5 份')
+                   action=PostbackAction(label="0.5份", data=f"recordWithQuantity^{food_id}:0.5",text='紀錄 0.5 份')
                                ),
                    QuickReplyButton(
-                   action=PostbackAction(label="1份", data=f"recordWithQuantity^{keyword}:1",text='紀錄 1 份')
+                   action=PostbackAction(label="1份", data=f"recordWithQuantity^{food_id}:1",text='紀錄 1 份')
                                ),
                    QuickReplyButton(
-                   action=PostbackAction(label="2份", data=f"recordWithQuantity^{keyword}:2",text='紀錄 2 份')
+                   action=PostbackAction(label="2份", data=f"recordWithQuantity^{food_id}:2",text='紀錄 2 份')
                                ),
                    QuickReplyButton(
-                   action=PostbackAction(label="3份", data=f"recordWithQuantity^{keyword}:3",text='紀錄 3 份')
+                   action=PostbackAction(label="3份", data=f"recordWithQuantity^{food_id}:3",text='紀錄 3 份')
                                ),
                    QuickReplyButton(
-                   action=PostbackAction(label="自訂份量", data=f"recordWithQuantity^{keyword}:other",inputOption='openKeyboard')
+                   action=PostbackAction(label="自訂份量", data=f"recordWithQuantity^{food_id}:other",inputOption='openKeyboard')
                                ),
                    QuickReplyButton(
                    action=PostbackAction(label="取消輸入",data=f'CancleRecord^{user_id}')
@@ -547,9 +813,34 @@ def askingQuantity(event,keyword,user_id):
         )       
     line_bot_api.reply_message(event.reply_token,message)
     # time.sleep(2)
-    filling_quantity[user_id]={
-        'foodid':keyword
-        }
+def askingImgDataQuantity(event,keyword,user_id):
+    message = TextSendMessage(
+               text = '請選擇要記錄的份量數',
+               quick_reply=(QuickReply(
+               items=[
+                   QuickReplyButton(
+                   action=PostbackAction(label="0.5份", data="record^quantity:0.5",text='紀錄 0.5 份')
+                               ),
+                   QuickReplyButton(
+                   action=PostbackAction(label="1份", data="record^quantity:1",text='紀錄 1 份')
+                               ),
+                   QuickReplyButton(
+                   action=PostbackAction(label="2份", data="record^quantity:2",text='紀錄 2 份')
+                               ),
+                   QuickReplyButton(
+                   action=PostbackAction(label="3份", data="record^quantity:3",text='紀錄 3 份')
+                               ),
+                   QuickReplyButton(
+                   action=PostbackAction(label="自訂份量", data="record^quantity:other",inputOption='openKeyboard',fillInText='份量:')
+                               ),
+                   QuickReplyButton(
+                   action=PostbackAction(label="取消輸入",data='record^cancle')
+                       )
+                   ]
+               )
+           )
+        )       
+    line_bot_api.reply_message(event.reply_token,message)
 
 def recordON(event,foodID, quantity,user_id):
     if quantity=='other':
@@ -568,11 +859,12 @@ def recordON(event,foodID, quantity,user_id):
     else:
         success=db_using.record2db(quantity,foodID, user_id)
         if success:
-            message = TextSendMessage(
-                        text = '記錄新增成功'
-                )
             if user_id in filling_quantity:    
                 filling_quantity.pop(user_id)
+                message = TextSendMessage(
+                            text = '記錄新增成功'
+                    )
+            
             line_bot_api.reply_message(event.reply_token,message)
 def isFloat(num):
     try:
