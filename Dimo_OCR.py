@@ -3,7 +3,7 @@ from google.cloud import vision_v1
 import requests
 import base64
 import numpy as np
-
+import re
 
 
 def OCR(image_data,img_id):
