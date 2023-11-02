@@ -104,7 +104,7 @@ def queryTheDetail(event,mtext,user_id):
                         "action":{
                         "type":"postback",
                         "label": "加到我的紀錄",
-                        "data": "addrecord^"+keyword,
+                        "data": "addrecord^"+keyword+':'+result.get('name'),
                         "text":"添加到我的紀錄"
                         }
                       }
